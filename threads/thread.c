@@ -6,24 +6,35 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+int d;
+
 void *mythread(void *arg) {
-	printf("mythread [%d %d %d]: Hello from mythread!\n", getpid(), getppid(), gettid());
+	int a;
+	static int b;
+	const int c;
+	printf("mythread [%d %d %d %ld]: Hello from mythread!\nlocal: %p static: %p const: %p global: %p\n",
+		 getpid(), getppid(), gettid(), pthread_self(), &a, &b, &c, &d);
+	sleep(3);
 	return NULL;
 }
 
 int main() {
-	pthread_t tid;
+	pthread_t tid[5];
 	int err;
 
 	printf("main [%d %d %d]: Hello from main!\n", getpid(), getppid(), gettid());
 
-	err = pthread_create(&tid, NULL, mythread, NULL);
-	if (err) {
+	for (int i = 0; i < 5; i++) {
+		err = pthread_create(&tid[i], NULL, mythread, NULL);
+		printf("main [%ld]\n", tid[i]);
+		if (err) {
 	    printf("main: pthread_create() failed: %s\n", strerror(err));
-		return -1;
+		return -1;}
 	}
 
-	pthread_join(tid, NULL);
+	for (int i = 0; i < 5; i++) {
+		pthread_join(tid[i], NULL);
+	}
 	
 	return 0;
 }
