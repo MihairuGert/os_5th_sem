@@ -1,0 +1,12 @@
+#define _GNU_SOURCE
+#include "pthread.h"
+#include <sys/mman.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <unistd.h>
+#include <linux/sched.h>    
+#include <sys/syscall.h>    
