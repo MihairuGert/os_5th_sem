@@ -45,6 +45,9 @@ int main() {
 		printf("main [%ld]\n", tid[i]);
 		if (err) {
 		    printf("main: pthread_create() failed: %s\n", strerror(err));
+			for (int j = 0; j < i; j++) {
+				pthread_join(tid[j], NULL);
+			}
 			return -1;
 		}
 		sleep(1);

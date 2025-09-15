@@ -16,8 +16,11 @@ void *mythread(void *arg) {
     data* d = (data*)arg;
     printf("mythread [%d] %d %s\n", gettid(), d->int_data, d->char_data);
     free(d);
-    //pthread_detach(pthread_self());
-	return NULL;
+    int r = pthread_detach(pthread_self());
+    printf("%d\n", r);
+    r = pthread_detach(pthread_self());
+    printf("%d\n", r);
+    return NULL;
 }
 
 int main() {
@@ -27,7 +30,7 @@ int main() {
     int s;
     
     s = pthread_attr_init(&attr);
-    s = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    //s = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	printf("main [%d %d %d]: Hello from main!\n", getpid(), getppid(), gettid());
 
@@ -45,6 +48,8 @@ int main() {
 		}
 		//sleep(1);
 	}
+
+    s = pthread_attr_destroy(&attr);
 	
 	return 0;
 }
