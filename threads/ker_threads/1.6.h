@@ -10,3 +10,19 @@
 #include <unistd.h>
 #include <linux/sched.h>    
 #include <sys/syscall.h>    
+
+#define GUARD_SIZE 4096
+#define STACK_SIZE 8388608
+
+typedef struct mythread
+{
+    int     tid;
+
+    void    *(*start_routine)(void*);
+    void    *arg;
+    void    **retval;
+
+    int     isFinished;
+} mythread;
+
+typedef mythread* mythread_t;
