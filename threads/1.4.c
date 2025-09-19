@@ -22,7 +22,8 @@ void *mythread(void *arg) {
 
     while (1)
     {
-        printf("%s\n", string);
+        count++;
+        //printf("%s", string);
     }
 
     pthread_cleanup_pop(0);
@@ -42,8 +43,10 @@ int main() {
 		return -1;
 	}
     sleep(2);
-    //printf("%d\n", count);
-    pthread_cancel(tid);
+    printf("%d\n", count);
+    int res = pthread_cancel(tid);
+    void** retval;
+    pthread_join(tid, retval);
 	
 	return 0;
 }

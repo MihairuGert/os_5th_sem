@@ -28,7 +28,7 @@ void *mythread(void *arg) {
 		d = 40;
 		printf("\achanged variables from %d thread\n", thread_num);
 	}
-	sleep(10);
+	sleep(1000);
 	return NULL;
 }
 

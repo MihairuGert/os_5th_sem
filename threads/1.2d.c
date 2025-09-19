@@ -14,12 +14,12 @@ typedef struct data {
 
 void *mythread(void *arg) {
     data* d = (data*)arg;
-    printf("mythread [%d] %d %s\n", gettid(), d->int_data, d->char_data);
+    for (; ; )
+    {
+        printf("mythread [%d] %d %s\n", gettid(), d->int_data, d->char_data);
+    }
+
     free(d);
-    int r = pthread_detach(pthread_self());
-    printf("%d\n", r);
-    r = pthread_detach(pthread_self());
-    printf("%d\n", r);
     return NULL;
 }
 
@@ -30,11 +30,11 @@ int main() {
     int s;
     
     s = pthread_attr_init(&attr);
-    //s = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    s = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	printf("main [%d %d %d]: Hello from main!\n", getpid(), getppid(), gettid());
 
-	for (;;) {
+	//for (;;) {
         
         data* d = malloc(sizeof(data));
         d->int_data = 10;
@@ -46,8 +46,8 @@ int main() {
 		    printf("main: pthread_create() failed: %s\n", strerror(err));
 			return -1;
 		}
-		//sleep(1);
-	}
+		sleep(1);
+	//}
 
     s = pthread_attr_destroy(&attr);
 	
