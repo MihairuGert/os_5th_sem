@@ -42,8 +42,10 @@ static int get_next_active()
     for (i = cur_tid + 1 ;; i++) 
     {
         i %= THREAD_LIMIT;
-        if (threads[i]->isActive == 1 || i == cur_tid) 
+        if (threads[i] != NULL && threads[i]->isActive == 1)
             return i;
+        if (i == cur_tid)
+            return -1;
     }
     return -1;
 }
@@ -62,16 +64,15 @@ int yield()
     pos = get_next_active();
     if (pos < 0)
         return -1;
-    if (pos == cur_tid)
-        return 1;
     
     old_tid = cur_tid;
     cur_tid = pos;
 
     swapcontext(&threads[old_tid]->context, &threads[pos]->context);
+    return 0;
 }
 
-int uthread_create(uthread_t thread, void *(start_routine), void *arg) 
+int uthread_create(uthread_t *thread, void *(start_routine), void *arg) 
 {
     int pos;
     pos = get_free_position();
@@ -81,27 +82,20 @@ int uthread_create(uthread_t thread, void *(start_routine), void *arg)
         return -1;
     }
 
-    thread = threads[pos];
+    *thread = threads[pos];
     
-    thread->start_routine = start_routine;
-    thread->arg = arg; 
-    thread->isActive = 1;
+    (*thread)->start_routine = start_routine;
+    (*thread)->arg = arg; 
+    (*thread)->isActive = 1;
+    (*thread)->tid = pos;
 
-    getcontext(&thread->context);
-    thread->context.uc_stack.ss_sp = thread->stack;
-    thread->context.uc_stack.ss_size = STACK_SIZE;
-    thread->context.uc_link = &main_context;
+    getcontext(&(*thread)->context);
+    (*thread)->context.uc_stack.ss_sp = (*thread)->stack;
+    (*thread)->context.uc_stack.ss_size = STACK_SIZE;
+    (*thread)->context.uc_link = &main_context;
 
-    cur_tid = pos;
-    makecontext(&thread->context, start_routine, 0);
-    swapcontext(&main_context, &thread->context);
-
+    makecontext(&(*thread)->context, (void (*)(void))start_routine, 1, arg);
     return 0;
-}
-
-int uthread_start(uthread_t thread) {
-    int ret = 1;
-    return ret;
 }
 
 void *hello(void *arg) {
@@ -114,6 +108,11 @@ void *hello(void *arg) {
 
     finish();
     return NULL;
+}
+
+int uthread_start(uthread_t thread) {
+    cur_tid = thread->tid;
+    swapcontext(&main_context, &thread->context);
 }
 
 int initializeThreads() {
@@ -150,10 +149,14 @@ int main(int argc, char const *argv[])
 
     getcontext(&main_context);
     uthread_t thread;
-    res = uthread_create(thread, hello, NULL);
+    res = uthread_create(&thread, hello, NULL);
+    if (res != 0) {
+        printf("uthread_create failed\n");
+        return 1;
+    }
     uthread_start(thread);
-    printf("main");
 
+    printf("main\n");
     finishThreads();
     return 0;
 }
