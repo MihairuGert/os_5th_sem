@@ -91,6 +91,7 @@ int uthread_create(uthread_t thread, void *(start_routine), void *arg)
     thread->context.uc_link = &main_context;
 
     cur_tid = pos;
+    printf("sadsad");
     makecontext(&thread->context, start_routine, 0);
 
     return 0;
@@ -103,6 +104,8 @@ void *hello(void *arg) {
 
 int main(int argc, char const *argv[])
 {
+    uthread_t thread;
+    int res = uthread_create(thread, hello, NULL);
     
     return 0;
 }

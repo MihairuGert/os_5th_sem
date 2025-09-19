@@ -1,5 +1,4 @@
 #define _GNU_SOURCE
-#include "pthread.h"
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +9,7 @@
 #include <unistd.h>
 #include <linux/sched.h>    
 #include <sys/syscall.h>    
+#include <sched.h>
 
 #define GUARD_SIZE 4096
 #define STACK_SIZE 8388608
@@ -26,3 +26,6 @@ typedef struct mythread
 } mythread;
 
 typedef mythread* mythread_t;
+
+int mythread_join(mythread_t thread, void **retval);
+int mythread_create(mythread_t thread, void *(start_routine), void *arg);

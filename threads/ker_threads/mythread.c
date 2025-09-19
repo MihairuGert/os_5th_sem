@@ -1,4 +1,4 @@
-#include "1.6.h"
+#include "mythread.h"
 
 static int start_routine_wrapper(void *arg) 
 {
@@ -18,7 +18,8 @@ int mythread_join(mythread_t thread, void **retval)
     return 0;
 }
 
-int mythread_create(mythread_t thread, void *(start_routine), void *arg) {
+int mythread_create(mythread_t thread, void *(start_routine), void *arg) 
+{
     mythread_t  args; 
     void        *stack;
     void        *stack_top;
@@ -59,31 +60,5 @@ int mythread_create(mythread_t thread, void *(start_routine), void *arg) {
         return -1;
     }
 
-    return 0;
-}
-
-void *hello(void *arg) {
-    printf("hello from mythread\n");
-    return NULL;
-}
-
-int main() {
-    mythread_t  thread;
-    int         res;
-    void        **retval;
-
-    res = mythread_create(thread, hello, NULL);
-    if (res == -1) 
-    {
-        fprintf(stderr, "Failed to create thread\n");
-        return 1;
-    }
-
-    res = mythread_join(thread, retval);
-    if (res == -1) 
-    {
-        fprintf(stderr, "Failed to join thread\n");
-        return 1;
-    }
     return 0;
 }
