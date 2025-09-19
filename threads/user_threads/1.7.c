@@ -29,7 +29,7 @@ static int get_free_position()
 
     for (i = 0; i < THREAD_LIMIT; i++) 
     {
-        if ((threads + i) != NULL && threads[i]->isActive == 0) 
+        if (threads[i] != NULL && threads[i]->isActive == 0) 
             return i;
     }
     return -1;
@@ -148,6 +148,7 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
+    getcontext(&main_context);
     uthread_t thread;
     res = uthread_create(thread, hello, NULL);
     uthread_start(thread);
