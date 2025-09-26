@@ -7,14 +7,23 @@ static int start_routine_wrapper(void *arg)
     args = (mythread_t)arg;
     args->retval = args->start_routine(args->arg);
     args->isFinished = 1;
+
     return 0;
 }
 
 int mythread_join(mythread_t thread, void **retval) 
 {
+    int res; 
+
     while(thread->isFinished != 1) 
         usleep(10);
     retval = thread->retval;
+    res = munmap(thread->stack, thread->stack_size + GUARD_SIZE);
+    if (res != 0)
+    {
+        fprintf(stderr, "mythread_join: munmap() failed: %s\n", strerror(errno));
+        return -1;
+    }
     return 0;
 }
 
@@ -39,6 +48,8 @@ int mythread_create(mythread_t thread, void *(start_routine), void *arg)
     args->start_routine = start_routine;
     args->arg = arg;
     args->isFinished = 0;
+    args->stack = stack;
+    args->stack_size = STACK_SIZE;
 
     err = mprotect(stack + GUARD_SIZE, STACK_SIZE, PROT_READ|PROT_WRITE);
     if (err) 

@@ -21,6 +21,8 @@ typedef struct mythread
     void    *(*start_routine)(void*);
     void    *arg;
     void    **retval;
+    void    *stack;
+    size_t  stack_size;
 
     int     isFinished;
 } mythread;
