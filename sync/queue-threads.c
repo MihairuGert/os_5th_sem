@@ -28,7 +28,7 @@ void set_cpu(int n) {
 		printf("set_cpu: pthread_setaffinity failed for cpu %d\n", n);
 		return;
 	}
-
+//
 	printf("set_cpu: set cpu %d\n", n);
 }
 

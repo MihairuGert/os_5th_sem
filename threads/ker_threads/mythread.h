@@ -25,6 +25,7 @@ typedef struct mythread
     size_t  stack_size;
 
     int     isFinished;
+    int     isJoined;
 } mythread;
 
 typedef mythread* mythread_t;
