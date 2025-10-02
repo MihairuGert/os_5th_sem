@@ -15,6 +15,7 @@ typedef struct
     void            **retval;
     unsigned int    tid;
     int             isActive;
+    int             isJoinable;
     int             isJoined;
     int             isFinished;
     char            stack[STACK_SIZE];
@@ -73,7 +74,7 @@ int yield()
 int finish() 
 {
     int res;
-    if (threads[cur_tid]->isJoined == 0)
+    if (threads[cur_tid]->isJoinable == 0)
         threads[cur_tid]->isActive = 0;
     threads[cur_tid]->isFinished = 1;
     res = yield();
@@ -84,13 +85,16 @@ int finish()
 
 int uthread_join(uthread_t thread, void** retval) 
 {
-    if (!thread->isJoined)
+    if (thread->isJoined)
+        return -1;
+    if (!thread->isJoinable)
         return -1;
     while (thread->isFinished != 1) {
         sleep(1);
     }
     *retval = thread->retval;
     thread->isActive = 0;
+    thread->isJoined = 1;
 }
 
 void thread_wrapper(uthread_t thread) {
@@ -113,7 +117,8 @@ int uthread_create(uthread_t *thread, void *(start_routine), void *arg)
     (*thread)->start_routine = start_routine;
     (*thread)->arg = arg; 
     (*thread)->isActive = 1;
-    (*thread)->isJoined = 1;
+    (*thread)->isJoinable = 1;
+    (*thread)->isJoined = 0;
     (*thread)->isFinished = 0;
     (*thread)->tid = pos;
 
@@ -180,39 +185,61 @@ int finishThreads() {
 
 int main(int argc, char const *argv[])
 {
-    int res;
+    int         res;
+    void*       ret;
+    uthread_t   thread1;
+    uthread_t   thread2;
     
     res = initializeThreads();
     if (res != 0)
     {
-        printf("thread init failed");
+        fprintf(stderr, "thread_init failed\n");
         return 1;
     }
 
     getcontext(&main_context);
 
-    uthread_t thread1;
     res = uthread_create(&thread1, hello, NULL);
-    if (res != 0) {
-        printf("uthread_create failed\n");
+    if (res != 0) 
+    {
+        fprintf(stderr, "uthread_create failed\n");
         return 1;
     }
 
-    uthread_t thread2;
     res = uthread_create(&thread2, hello, NULL);
-    if (res != 0) {
-        printf("uthread_create failed\n");
+    if (res != 0) 
+    {
+        fprintf(stderr, "uthread_create failed\n");
         return 1;
     }
 
     uthread_start(thread1);
 
     printf("main\n");
-    void* ret;
-    uthread_join(thread1, &ret);
-    printf("main got retval = %d", *(int*)ret);
+    
+    res = uthread_join(thread1, &ret);
+    if (res != 0) 
+    {
+        fprintf(stderr, "uthread_join failed\n");
+        return 1;
+    }
+    printf("main got retval = %d\n", *(int*)ret);
+    
     uthread_join(thread2, &ret);
-    printf("main got retval = %d", *(int*)ret);
+    if (res != 0) 
+    {
+        fprintf(stderr, "uthread_join failed\n");
+        return 1;
+    }
+    printf("main got retval = %d\n", *(int*)ret);
+    
+    uthread_join(thread2, &ret);
+    if (res != 0) 
+    {
+        fprintf(stderr, "uthread_join failed\n");
+    }
+
     finishThreads();
+    
     return 0;
 }

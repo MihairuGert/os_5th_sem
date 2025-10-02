@@ -51,9 +51,7 @@ int main()
     if (res != 0) 
     {
         fprintf(stderr, "Failed to join thread\n");
-        goto success;
     }
 
-    success:
     return 0;
 }
