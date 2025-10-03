@@ -1,31 +1,4 @@
-#include <ucontext.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-
-#define STACK_SIZE 8 * 1024 * 1024
-#define THREAD_LIMIT 10  
-
-typedef struct 
-{
-    ucontext_t      context;  
-    void            *(*start_routine)(void*);
-    void            *arg;
-    void            **retval;
-    unsigned int    tid;
-    int             isActive;
-    int             isJoinable;
-    int             isJoined;
-    int             isFinished;
-    char            stack[STACK_SIZE];
-} uthread;
-
-typedef uthread* uthread_t;
-
-ucontext_t       main_context;
-uthread_t        threads[THREAD_LIMIT];
-unsigned int     cur_tid = 0;
+#include "1.7.h"
 
 static int get_free_position() 
 {
@@ -201,12 +174,10 @@ int main(int argc, char const *argv[])
 
     res = uthread_create(&thread1, hello, NULL);
     if (res != 0) 
-    {
-        fprintf(stderr, "uthread_create failed\n");
-        return 1;
-    }
+        goto create_error;
 
     res = uthread_create(&thread2, hello, NULL);
+    create_error:
     if (res != 0) 
     {
         fprintf(stderr, "uthread_create failed\n");
