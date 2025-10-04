@@ -1,84 +1,142 @@
 #include "thread_pool.h"
 
 static int 
+is_thread_running(pthread_t thread) {
+    int result;
+    
+    result = pthread_tryjoin_np(thread, NULL);
+    
+    switch (result)
+    {
+    case 0:
+        return 0;
+    case EBUSY:
+        return 1;
+    default:
+        return -1;
+    }
+}
+
+static void*
+deamon_routine(void* arg) 
+{
+    thread_pool_t   *t_pool;
+    int             result;
+    size_t          i;
+
+    t_pool = (thread_pool_t*) arg;
+    while (1)
+    {
+        for (i = 0; i < t_pool->thread_count; i++)
+        {
+            if (t_pool->free_threads[i])
+                continue;
+            result = is_thread_running(t_pool->threads[i]);
+            if (result == 1) 
+                t_pool->free_threads[i] = true;
+            if (result < 0) 
+                exit(result);
+        }
+        pthread_testcancel();
+        usleep(USLEEP_MAGIC);
+    }
+    return NULL;
+}
+
+static int 
 create_deamon(thread_pool_t *t_pool) 
 {
+    int err;
 
+    err = pthread_create(&t_pool->deamon, NULL, deamon_routine, (void*)t_pool);
+    if (err != 0) {
+        return err;
+    }
+
+    return 0;
 }
 
 int 
 create_thread_pool(thread_pool_t *t_pool) 
 {
-    t_pool = (thread_pool_t*) malloc(sizeof(thread_pool_t));
-    
-    if (!t_pool)
-        return POOL_MALLOC_FAIL;
+    int err;
+    size_t i;
 
     t_pool->free_threads = (bool*) malloc(CAPACITY * sizeof(bool));
-    
     if (!t_pool->free_threads)
         return FREE_THREADS_MALLOC_FAIL;
 
-    memset(t_pool->free_threads, 1, CAPACITY);
+    for (i = 0; i < CAPACITY; i++) 
+    {
+        t_pool->free_threads[i] = true;
+    }
     
     t_pool->threads = (pthread_t*) malloc(CAPACITY * sizeof(pthread_t));
-
     if (!t_pool->threads)
         return POOL_THREADS_MALLOC_FAIL;
+    
+    t_pool->thread_count = CAPACITY;
 
-    t_pool->thread_count = 10;
+    err = create_deamon(t_pool);
+    if (err != 0)
+        return err;
 
     return 0;
 }
 
-pthread_t*
+int 
 add_thread( thread_pool_t *t_pool, 
-            const pthread_attr_t *restrict attr,
-            typeof(void *(void *)) *start_routine,
-            void *restrict arg) 
+            const pthread_attr_t *attr,
+            __typeof__(void *(void *)) *start_routine,
+            void *arg)
 {
-    pthread_t*  thread;
     size_t      i;
-    int         res;
+    int         err;
 
     begin:
     for (i = 0; i < t_pool->thread_count; i++)
     {
         if (t_pool->free_threads[i]) 
         {   
-            res = pthread_create(t_pool->threads[i], attr, start_routine, arg);
-            if (res != 0)
-                return NULL;
+            err = pthread_create(&t_pool->threads[i], attr, start_routine, arg);
+            if (err != 0)
+                return err;
 
             t_pool->free_threads[i] = false;
 
-            return thread;
+            return 0;
         }
     }
 
     t_pool->threads = realloc(t_pool->threads, REALLOC_MAGIC * t_pool->thread_count);
+    
     t_pool->free_threads = realloc(t_pool->free_threads, REALLOC_MAGIC * t_pool->thread_count);
-    memset(t_pool->free_threads + t_pool->thread_count, 1, REALLOC_MAGIC * t_pool->thread_count - t_pool->thread_count);
+    for (i = CAPACITY; i < REALLOC_MAGIC * CAPACITY; i++) 
+    {
+        t_pool->free_threads[i] = true;
+    }
+    
+
     t_pool->thread_count *= REALLOC_MAGIC;
     goto begin;
 
-    return thread;
+    return 0;
 }
 
 int 
 destroy_thread_pool(thread_pool_t *t_pool)
 {
-    size_t  i;
-    int     res;
     void    **retval;
+    size_t  i;
+    int     err;
 
     for (i = 0; i < t_pool->thread_count; i++)
     {
         if (!t_pool->free_threads[i]) 
         {   
-            res = pthread_cancel(t_pool->threads[i]);
-            if (res != 0)
-                return res;
+            err = pthread_cancel(t_pool->threads[i]);
+            if (err != 0)
+                return err;
 
             t_pool->free_threads[i] = true;
         }
@@ -86,7 +144,7 @@ destroy_thread_pool(thread_pool_t *t_pool)
 
     free(t_pool->free_threads);
     free(t_pool->threads);
-    free(t_pool);
+    pthread_cancel(t_pool->deamon);
 
     return 0;
 }
