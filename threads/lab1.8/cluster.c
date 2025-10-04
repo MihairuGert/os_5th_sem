@@ -30,7 +30,7 @@ main()
         tid[i] = i;
     }
     
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 100; i++)
     {
         err = add_thread(&t_pool, NULL, hello, &tid[i]);
         if (err != 0)

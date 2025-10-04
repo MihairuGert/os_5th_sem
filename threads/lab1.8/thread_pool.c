@@ -27,6 +27,7 @@ deamon_routine(void* arg)
     t_pool = (thread_pool_t*) arg;
     while (1)
     {
+        pthread_mutex_lock(&t_pool->mutex);
         for (i = 0; i < t_pool->thread_count; i++)
         {
             if (t_pool->free_threads[i])
@@ -37,6 +38,8 @@ deamon_routine(void* arg)
             if (result < 0) 
                 exit(result);
         }
+        pthread_mutex_unlock(&t_pool->mutex);
+
         pthread_testcancel();
         usleep(USLEEP_MAGIC);
     }
@@ -81,6 +84,12 @@ create_thread_pool(thread_pool_t *t_pool)
     if (err != 0)
         return err;
 
+    if (pthread_mutex_init(&t_pool->mutex, NULL) != 0) {
+        free(t_pool->threads);
+        free(t_pool->free_threads);
+        return -1;
+    }
+
     return 0;
 }
 
@@ -93,6 +102,7 @@ add_thread( thread_pool_t *t_pool,
     size_t      i;
     int         err;
 
+    pthread_mutex_lock(&t_pool->mutex);
     begin:
     for (i = 0; i < t_pool->thread_count; i++)
     {
@@ -103,7 +113,8 @@ add_thread( thread_pool_t *t_pool,
                 return err;
 
             t_pool->free_threads[i] = false;
-
+            pthread_mutex_unlock(&t_pool->mutex);
+            
             return 0;
         }
     }
@@ -119,6 +130,7 @@ add_thread( thread_pool_t *t_pool,
 
     t_pool->thread_count *= REALLOC_MAGIC;
     goto begin;
+    pthread_mutex_unlock(&t_pool->mutex);
 
     return 0;
 }
@@ -130,6 +142,7 @@ destroy_thread_pool(thread_pool_t *t_pool)
     size_t  i;
     int     err;
 
+    pthread_cancel(t_pool->deamon);
     for (i = 0; i < t_pool->thread_count; i++)
     {
         if (!t_pool->free_threads[i]) 
@@ -142,9 +155,9 @@ destroy_thread_pool(thread_pool_t *t_pool)
         }
     }
 
+    pthread_mutex_destroy(&t_pool->mutex);
     free(t_pool->free_threads);
     free(t_pool->threads);
-    pthread_cancel(t_pool->deamon);
 
     return 0;
 }

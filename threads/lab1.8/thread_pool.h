@@ -17,7 +17,7 @@
 
 #define CAPACITY        10
 #define REALLOC_MAGIC   2
-#define USLEEP_MAGIC    50000   
+#define USLEEP_MAGIC    100
 
 typedef struct thread_pool
 {
@@ -25,7 +25,8 @@ typedef struct thread_pool
     bool        *free_threads;
     size_t      thread_count;
 
-    pthread_t   deamon;
+    pthread_t       deamon;
+    pthread_mutex_t mutex;
 } thread_pool_t;
 
 int create_thread_pool(thread_pool_t *t_pool);
