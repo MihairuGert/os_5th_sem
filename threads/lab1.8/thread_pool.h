@@ -10,22 +10,27 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define POOL_MALLOC_FAIL            -1
-#define FREE_THREADS_MALLOC_FAIL    -2
-#define POOL_THREADS_MALLOC_FAIL    -3
-#define DEAMON_MALLOC_FAIL          -4
-#define FREE_THREADS_REALLOC_FAIL   -5
-#define THREADS_REALLOC_FAIL        -6
+#define THREADS_MALLOC_ERR      -1
+#define MUTEX_INIT_ERR          -2
+#define THREADS_REALLOC_ERR     -3
+#define POS_NOT_FOUND_ERR       -4
 
 #define CAPACITY        10
 #define REALLOC_MAGIC   2
 #define USLEEP_MAGIC    10000
 
+typedef struct thread_info
+{
+    pthread_t   thread;
+    void        **retval;
+
+    bool        isFree;
+} thread_info_t;
+
 typedef struct thread_pool
 {
-    pthread_t   *threads;
-    bool        *free_threads;
-    size_t      thread_count;
+    thread_info_t   *threads;
+    size_t          thread_count;
 
     pthread_t       deamon;
     pthread_mutex_t mutex;
