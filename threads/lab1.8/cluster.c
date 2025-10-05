@@ -5,7 +5,7 @@
 void *
 hello(void* arg)
 {
-    for (size_t i = 0; i < 3; i++)
+    for (size_t i = 0; i < 30; i++)
     {
         printf("fuck it -> %d\n", *(int*)arg);
         sleep(1);
@@ -37,7 +37,7 @@ main()
             return err;
     }
 
-    sleep(10);
+    sleep(3);
 
     destroy_thread_pool(&t_pool);    
 

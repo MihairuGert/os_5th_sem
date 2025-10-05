@@ -157,6 +157,8 @@ destroy_thread_pool(thread_pool_t *t_pool)
     size_t  i;
     int     err;
 
+    pthread_mutex_lock(&t_pool->mutex);
+
     pthread_cancel(t_pool->deamon);
     pthread_join(t_pool->deamon, NULL);
 
@@ -170,6 +172,7 @@ destroy_thread_pool(thread_pool_t *t_pool)
         }
     }
 
+    pthread_mutex_unlock(&t_pool->mutex);
     pthread_mutex_destroy(&t_pool->mutex);
     free(t_pool->threads);
 

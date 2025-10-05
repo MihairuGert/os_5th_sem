@@ -19,17 +19,23 @@
 #define REALLOC_MAGIC   2
 #define USLEEP_MAGIC    10000
 
+/* This enum will be fully used if I'll be asked to
+ * implement thread joining. In fact, it would be
+ * not quite easy to deal with detached ones. 
+ */ 
+
 typedef enum {
     THREAD_FREE = 0,
-    THREAD_RUNNING,
-    THREAD_COMPLETED
+    THREAD_JOINED_BY_DEAMON,
+    THREAD_JOINED_BY_USER,
+    THREAD_DETACHED
 } thread_state_t;
 
 typedef struct thread_info
 {
     pthread_t       thread;
     thread_state_t  state;
-    
+
     void            *retval;
 } thread_info_t;
 
