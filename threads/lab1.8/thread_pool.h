@@ -14,10 +14,12 @@
 #define FREE_THREADS_MALLOC_FAIL    -2
 #define POOL_THREADS_MALLOC_FAIL    -3
 #define DEAMON_MALLOC_FAIL          -4
+#define FREE_THREADS_REALLOC_FAIL   -5
+#define THREADS_REALLOC_FAIL        -6
 
 #define CAPACITY        10
 #define REALLOC_MAGIC   2
-#define USLEEP_MAGIC    100
+#define USLEEP_MAGIC    10000
 
 typedef struct thread_pool
 {

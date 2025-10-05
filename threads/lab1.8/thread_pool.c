@@ -2,7 +2,7 @@
 
 static int 
 is_thread_running(pthread_t thread) {
-    int result;
+    int     result;
     
     result = pthread_tryjoin_np(thread, NULL);
     
@@ -119,13 +119,22 @@ add_thread( thread_pool_t *t_pool,
         }
     }
 
-    t_pool->threads = realloc(t_pool->threads, REALLOC_MAGIC * t_pool->thread_count);
-    
-    t_pool->free_threads = realloc(t_pool->free_threads, REALLOC_MAGIC * t_pool->thread_count);
-    for (i = CAPACITY; i < REALLOC_MAGIC * CAPACITY; i++) 
+    t_pool->threads = realloc(t_pool->threads, sizeof(pthread_t) * REALLOC_MAGIC * t_pool->thread_count);
+    if (!t_pool->threads)
     {
-        t_pool->free_threads[i] = true;
+        pthread_mutex_unlock(&t_pool->mutex);
+        return THREADS_REALLOC_FAIL;
     }
+
+    t_pool->free_threads = realloc(t_pool->free_threads, sizeof(bool) * REALLOC_MAGIC * t_pool->thread_count);
+    if (!t_pool->free_threads)
+    {
+        pthread_mutex_unlock(&t_pool->mutex);
+        return FREE_THREADS_REALLOC_FAIL;
+    }
+    
+    for (i = t_pool->thread_count; i < REALLOC_MAGIC * t_pool->thread_count; i++) 
+        t_pool->free_threads[i] = true;
     
 
     t_pool->thread_count *= REALLOC_MAGIC;
