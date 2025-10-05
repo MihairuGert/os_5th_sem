@@ -30,11 +30,11 @@ deamon_routine(void* arg)
         pthread_mutex_lock(&t_pool->mutex);
         for (i = 0; i < t_pool->thread_count; i++)
         {
-            if (t_pool->threads[i].isFree)
+            if (t_pool->threads[i].state == THREAD_FREE)
                 continue;
             result = is_thread_running(&t_pool->threads[i]);
             if (result == 0) 
-                t_pool->threads[i].isFree = true;
+                t_pool->threads[i].state = THREAD_FREE;
             if (result < 0) 
                 exit(result);
         }
@@ -70,7 +70,7 @@ create_thread_pool(thread_pool_t *t_pool)
 
     for (i = 0; i < CAPACITY; i++) 
     {
-        t_pool->threads[i].isFree = true;
+        t_pool->threads[i].state = THREAD_FREE;
     }
     
     t_pool->thread_count = CAPACITY;
@@ -103,7 +103,7 @@ create_thread(thread_info_t *thread,
     if (err != 0)
         return err;
 
-    thread->isFree = false;
+    thread->state = THREAD_FREE;
     return 0;
 }
 
@@ -119,7 +119,7 @@ add_thread( thread_pool_t *t_pool,
     pthread_mutex_lock(&t_pool->mutex);
     for (i = 0; i < t_pool->thread_count; i++)
     {
-        if (t_pool->threads[i].isFree) 
+        if (t_pool->threads[i].state == THREAD_FREE) 
         {   
             err = create_thread(&t_pool->threads[i], attr, start_routine, arg);
             if (err != 0)
@@ -137,7 +137,7 @@ add_thread( thread_pool_t *t_pool,
     }
     
     for (i = t_pool->thread_count; i < REALLOC_MAGIC * t_pool->thread_count; i++) 
-        t_pool->threads[i].isFree = true;
+        t_pool->threads[i].state = THREAD_FREE;
     
 
     t_pool->thread_count *= REALLOC_MAGIC;
@@ -159,10 +159,10 @@ destroy_thread_pool(thread_pool_t *t_pool)
 
     pthread_cancel(t_pool->deamon);
     pthread_join(t_pool->deamon, NULL);
-    
+
     for (i = 0; i < t_pool->thread_count; i++)
     {
-        if (!t_pool->threads[i].isFree) 
+        if (t_pool->threads[i].state != THREAD_FREE) 
         {   
             err = pthread_cancel(t_pool->threads[i].thread);
             if (err != 0)

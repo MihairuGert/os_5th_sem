@@ -19,12 +19,18 @@
 #define REALLOC_MAGIC   2
 #define USLEEP_MAGIC    10000
 
+typedef enum {
+    THREAD_FREE = 0,
+    THREAD_RUNNING,
+    THREAD_COMPLETED
+} thread_state_t;
+
 typedef struct thread_info
 {
-    pthread_t   thread;
-    void        **retval;
-
-    bool        isFree;
+    pthread_t       thread;
+    thread_state_t  state;
+    
+    void            *retval;
 } thread_info_t;
 
 typedef struct thread_pool
