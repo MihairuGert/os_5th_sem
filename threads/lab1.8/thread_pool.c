@@ -75,15 +75,35 @@ create_thread_pool(thread_pool_t *t_pool)
     
     t_pool->thread_count = CAPACITY;
 
-    err = create_deamon(t_pool);
-    if (err != 0)
-        return err;
-
-    if (pthread_mutex_init(&t_pool->mutex, NULL) != 0) {
+    if (pthread_mutex_init(&t_pool->mutex, NULL) != 0) 
+    {
         free(t_pool->threads);
         return MUTEX_INIT_ERR;
     }
 
+    err = create_deamon(t_pool);
+    if (err != 0)
+    {    
+        free(t_pool->threads);
+        return err;
+    }
+
+    return 0;
+}
+
+static int
+create_thread(thread_info_t *thread, 
+            const pthread_attr_t *attr,
+            __typeof__(void *(void *)) *start_routine,
+            void *arg)
+{
+    int err;
+
+    err = pthread_create(&thread->thread, attr, start_routine, arg);
+    if (err != 0)
+        return err;
+
+    thread->isFree = false;
     return 0;
 }
 
@@ -97,18 +117,14 @@ add_thread( thread_pool_t *t_pool,
     int         err;
 
     pthread_mutex_lock(&t_pool->mutex);
-    begin:
     for (i = 0; i < t_pool->thread_count; i++)
     {
         if (t_pool->threads[i].isFree) 
         {   
-            err = pthread_create(&t_pool->threads[i].thread, attr, start_routine, arg);
+            err = create_thread(&t_pool->threads[i], attr, start_routine, arg);
             if (err != 0)
                 return err;
-
-            t_pool->threads[i].isFree = false;
             pthread_mutex_unlock(&t_pool->mutex);
-            
             return i;
         }
     }
@@ -125,10 +141,13 @@ add_thread( thread_pool_t *t_pool,
     
 
     t_pool->thread_count *= REALLOC_MAGIC;
-    goto begin;
+
+    err = create_thread(&t_pool->threads[t_pool->thread_count / REALLOC_MAGIC], attr, start_routine, arg);
+    if (err != 0)
+        return err;
     pthread_mutex_unlock(&t_pool->mutex);
 
-    return POS_NOT_FOUND_ERR;
+    return t_pool->thread_count / REALLOC_MAGIC;
 }
 
 int 
@@ -139,6 +158,8 @@ destroy_thread_pool(thread_pool_t *t_pool)
     int     err;
 
     pthread_cancel(t_pool->deamon);
+    pthread_join(t_pool->deamon, NULL);
+    
     for (i = 0; i < t_pool->thread_count; i++)
     {
         if (!t_pool->threads[i].isFree) 
