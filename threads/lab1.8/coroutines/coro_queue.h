@@ -15,13 +15,12 @@ typedef struct {
 typedef struct {
     context_t       context;
     void            *(*start_routine)(void*);
-    void            *arg;
     void            **retval;
 } coroutine_info_t;
 
-typedef struct {
-    coro_queue_node_t   *next;
-    coroutine_info_t    *coro;
+typedef struct coro_queue_node_t {
+    struct coro_queue_node_t    *next;
+    coroutine_info_t            *coro;
 } coro_queue_node_t;
 
 typedef struct {

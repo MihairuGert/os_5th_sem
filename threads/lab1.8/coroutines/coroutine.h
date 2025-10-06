@@ -12,6 +12,7 @@
 
 #define STACK_MALLOC_ERR    -1
 #define CONTEXT_DESTROY_ERR -2
+#define CORO_MALLOC_ERR     -3
 
 typedef struct {
     context_t       context;
@@ -26,9 +27,12 @@ typedef struct {
 } coroutine_t;
 
 int create_scheduler(scheduler_t *scheduler);
-int create_coroutine(scheduler_t *scheduler, 
-                    void (*routine)(void), 
+int create_coroutine(coroutine_t *coro,
+                    scheduler_t *scheduler, 
+                    void (*routine)(void*), 
                     void **retval, 
+                    void *arg,
                     int __argc, ...);
+int yeild(coroutine_t *coro);
 
 #endif
