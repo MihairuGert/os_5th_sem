@@ -27,6 +27,8 @@ typedef struct {
 } coroutine_t;
 
 int create_scheduler(scheduler_t *scheduler);
+int run_scheduler(scheduler_t *scheduler);
+
 int create_coroutine(coroutine_t *coro,
                     scheduler_t *scheduler, 
                     void (*routine)(void*), 

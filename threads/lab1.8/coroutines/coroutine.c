@@ -108,4 +108,19 @@ create_scheduler(scheduler_t *scheduler)
     return 0;
 }
 
+int 
+run_scheduler(scheduler_t *scheduler)
+{
+    int         err;
+    ucontext_t  context;
+
+    scheduler->context.context.uc_link = &context;
+    
+    err = swapcontext(&context, &scheduler->context.context);
+    if (err != 0)
+        return err;
+
+    return 0;
+}
+
 
