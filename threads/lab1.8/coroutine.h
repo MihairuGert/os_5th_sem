@@ -1,42 +1,34 @@
 #ifndef COROUTINE_H
 #define COROUTINE_H
 
-#include <ucontext.h>
-#include <stdlib.h>
+#define _GNU_SOURCE
 #include <stdarg.h>
+#include <unistd.h>
 
-#define STACK_SIZE 8 * 1024
+#include "coro_queue.h"
 
-#define STACK_MALLOC_ERR -1
+#define STACK_SIZE      8 * 1024
+#define SCHEDULER_MAGIC 10000
+
+#define STACK_MALLOC_ERR    -1
 #define CONTEXT_DESTROY_ERR -2
 
-typedef struct context {
-    ucontext_t      context;
-    void            *stack;
-} context_t;
-
-typedef struct coroutine_info {
+typedef struct {
     context_t       context;
-    void            *(*start_routine)(void*);
-    void            *arg;
-    void            **retval;
-    
-    int             priority;
-} coroutine_info_t;
+    coro_queue_t    queue;
 
-typedef struct scheduler {
-    context_t       context;
-    coroutine_info **coroutines;
+    bool            is_done;
 } scheduler_t;
 
-typedef struct coroutine {
-    scheduler_t     *scheduler;
-    coroutine_info  *info;
+typedef struct {
+    scheduler_t         *scheduler;
+    coroutine_info_t    *info;
 } coroutine_t;
 
 int create_scheduler(scheduler_t *scheduler);
-int create_coroutine();
-
+int create_coroutine(scheduler_t *scheduler, 
+                    void (*routine)(void), 
+                    void **retval, 
+                    int __argc, ...);
 
 #endif
-

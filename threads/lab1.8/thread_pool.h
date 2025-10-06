@@ -31,7 +31,7 @@ typedef enum {
     THREAD_DETACHED
 } thread_state_t;
 
-typedef struct thread_info
+typedef struct
 {
     pthread_t       thread;
     thread_state_t  state;
@@ -39,7 +39,7 @@ typedef struct thread_info
     void            *retval;
 } thread_info_t;
 
-typedef struct thread_pool
+typedef struct
 {
     thread_info_t   *threads;
     size_t          thread_count;
