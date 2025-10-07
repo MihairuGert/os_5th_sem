@@ -44,6 +44,7 @@ coro_queue_push(coro_queue_t *queue, coroutine_info_t *coro)
     }
     
     queue->size++;
+    return 0;
 }
 
 coroutine_info_t *

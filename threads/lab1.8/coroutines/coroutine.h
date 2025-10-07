@@ -4,6 +4,9 @@
 #define _GNU_SOURCE
 #include <stdarg.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #include "coro_queue.h"
 
@@ -17,13 +20,12 @@
 typedef struct {
     context_t       context;
     coro_queue_t    queue;
-
     bool            is_done;
 } scheduler_t;
 
 typedef struct {
     scheduler_t         *scheduler;
-    coroutine_info_t    *info;
+    coroutine_info_t    info;
 } coroutine_t;
 
 int create_scheduler(scheduler_t *scheduler);
@@ -32,9 +34,7 @@ int run_scheduler(scheduler_t *scheduler);
 int create_coroutine(coroutine_t *coro,
                     scheduler_t *scheduler, 
                     void (*routine)(void*), 
-                    void **retval, 
-                    void *arg,
-                    int __argc, ...);
+                    void *arg);
 int yeild(coroutine_t *coro);
 
 #endif

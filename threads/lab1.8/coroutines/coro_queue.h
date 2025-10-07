@@ -1,22 +1,12 @@
 #ifndef CORO_QUEUE_H
 #define CORO_QUEUE_H
 
-#include <ucontext.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "coro_core.h"
+
 #define NODE_MALLOC_ERR -1
-
-typedef struct {
-    ucontext_t      context;
-    void            *stack;
-} context_t;
-
-typedef struct {
-    context_t       context;
-    void            *(*start_routine)(void*);
-    void            **retval;
-} coroutine_info_t;
 
 typedef struct coro_queue_node_t {
     struct coro_queue_node_t    *next;

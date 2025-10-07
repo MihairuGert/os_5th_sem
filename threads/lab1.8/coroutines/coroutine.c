@@ -1,13 +1,22 @@
 #include "coroutine.h"
 
+static void
+coroutine_wrapper(void *arg)
+{
+    coroutine_t *coro = (coroutine_t *)arg;
+    void (*user_routine)(void*) = (void (*)(void*))coro->info.user_routine;
+    
+    if (user_routine) {
+        user_routine(coro->info.arg);
+        yeild(coro);
+    }
+}
+
 static int
-create_context(context_t *context, void (*routine)(void*), void *arg, int __argc, ...)
+create_context(context_t *context, void (*routine)(void*), void *arg)
 {
     void    *stack;
-    va_list args;
     int     err;
-
-    va_start(args, __argc);
 
     stack = malloc(STACK_SIZE * sizeof(char));
     if (!stack) 
@@ -23,9 +32,8 @@ create_context(context_t *context, void (*routine)(void*), void *arg, int __argc
     context->context.uc_stack.ss_size = STACK_SIZE;
     context->context.uc_link = NULL;
 
-    makecontext(&context->context, (void (*)())routine, 1 + __argc, arg, args);
+    makecontext(&context->context, (void (*)())routine, 1, arg);
     
-    va_end(args);
     return 0;
 }
 
@@ -45,11 +53,12 @@ scheduler_routine(scheduler_t *scheduler)
 
     while (!scheduler->is_done)
     {
+        coro_queue_node_t* head = scheduler->queue.head;
+
         coro = coro_queue_pop(&scheduler->queue);
         if (!coro)
         {
-            usleep(SCHEDULER_MAGIC);
-            continue;
+            return;
         }
 
         swapcontext(&scheduler->context.context, &coro->context.context);
@@ -60,24 +69,24 @@ int
 create_coroutine(coroutine_t *coro,
                 scheduler_t *scheduler, 
                 void (*routine)(void*), 
-                void **retval, 
-                void *arg,
-                int __argc, ...)
+                void *arg)
 {
     int         err;
-    va_list     args;
 
-    va_start(args, __argc);
+    coro->scheduler = scheduler;
+    coro->info.arg = arg;
+    coro->info.user_routine = routine;
 
-    err = create_context(&coro->info->context, routine, arg, __argc, args);
-    if (err != 0)
-        return err;
-    
-    err = coro_queue_push(&scheduler->queue, coro->info);
-    if (err != 0)
+    err = create_context(&coro->info.context, coroutine_wrapper, coro);
+    if (err != 0) 
         return err;
 
-    va_end(args);
+    coro->info.context.context.uc_link = &scheduler->context.context;
+
+    err = coro_queue_push(&scheduler->queue, &coro->info);
+    if (err != 0)
+        return err;
+
     return 0;
 }
 
@@ -86,11 +95,12 @@ yeild(coroutine_t *coro)
 {
     int err;
 
-    err = coro_queue_push(&coro->scheduler->queue, coro->info);
+    printf("Yeilding %p\n", coro);
+    err = coro_queue_push(&coro->scheduler->queue, &coro->info);
     if (err != 0)
         return err;
     
-    swapcontext(&coro->info->context.context, &coro->scheduler->context.context);
+    swapcontext(&coro->info.context.context, &coro->scheduler->context.context);
     return 0;
 }
 
@@ -99,7 +109,7 @@ create_scheduler(scheduler_t *scheduler)
 {
     int err;
 
-    err = create_context(&scheduler->context, (void (*)(void*))scheduler_routine, scheduler, 0);
+    err = create_context(&scheduler->context, (void (*)(void*))scheduler_routine, scheduler);
     if (err != 0)
         return err;
 
@@ -115,12 +125,10 @@ run_scheduler(scheduler_t *scheduler)
     ucontext_t  context;
 
     scheduler->context.context.uc_link = &context;
-    
+
     err = swapcontext(&context, &scheduler->context.context);
     if (err != 0)
         return err;
 
     return 0;
 }
-
-
