@@ -1,14 +1,43 @@
 #include "coroutine.h"
 
+static int
+free_context_stack(context_t *context)
+{
+    if (!context || !context->stack)
+        return CONTEXT_DESTROY_ERR;
+    free(context->stack);
+    return 0;
+}
+
+static int 
+finish(coroutine_t *coro)
+{
+    int err;
+
+    err = free_context_stack(&coro->info.context);
+    if (err != 0)
+        return err;
+
+    err = swapcontext(&coro->info.context.context, &coro->scheduler->context.context);
+    if (err != 0)
+        return err;
+
+    return 0;
+}
+
 static void
 coroutine_wrapper(void *arg)
 {
+    int err;
+
     coroutine_t *coro = (coroutine_t *)arg;
     void (*user_routine)(void*) = (void (*)(void*))coro->info.user_routine;
     
     if (user_routine) {
         user_routine(coro->info.arg);
-        yeild(coro);
+        err = finish(coro);
+        if (err != 0)
+            exit(err);
     }
 }
 
@@ -37,15 +66,6 @@ create_context(context_t *context, void (*routine)(void*), void *arg)
     return 0;
 }
 
-static int
-destroy_context(context_t *context)
-{
-    if (!context || !context->stack)
-        return CONTEXT_DESTROY_ERR;
-    free(context->stack);
-    return 0;
-}
-
 static void
 scheduler_routine(scheduler_t *scheduler)
 {
@@ -58,7 +78,8 @@ scheduler_routine(scheduler_t *scheduler)
         coro = coro_queue_pop(&scheduler->queue);
         if (!coro)
         {
-            return;
+            free_context_stack(&scheduler->context);
+            swapcontext(&scheduler->context.context, &scheduler->main_ctx);
         }
 
         swapcontext(&scheduler->context.context, &coro->context.context);
@@ -100,7 +121,9 @@ yeild(coroutine_t *coro)
     if (err != 0)
         return err;
     
-    swapcontext(&coro->info.context.context, &coro->scheduler->context.context);
+    err = swapcontext(&coro->info.context.context, &coro->scheduler->context.context);
+    if (err != 0)
+        return err;
     return 0;
 }
 
@@ -122,11 +145,8 @@ int
 run_scheduler(scheduler_t *scheduler)
 {
     int         err;
-    ucontext_t  context;
 
-    scheduler->context.context.uc_link = &context;
-
-    err = swapcontext(&context, &scheduler->context.context);
+    err = swapcontext(&scheduler->main_ctx, &scheduler->context.context);
     if (err != 0)
         return err;
 

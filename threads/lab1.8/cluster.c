@@ -76,8 +76,9 @@ void* thread_worker(void* arg)
 
 int main()
 {
-    thread_pool_t t_pool;
-    int err;
+    thread_pool_t   t_pool;
+    int             err;
+    int             *thread_ids;
     
     printf("Main: Creating thread pool\n");
     err = create_thread_pool(&t_pool);
@@ -88,17 +89,17 @@ int main()
     }
     
     printf("Main: Adding tasks to thread pool\n");
+
+    thread_ids = malloc(sizeof(int));
     
     for (int i = 0; i < 1; i++) 
     {
-        int* thread_id = malloc(sizeof(int));
-        *thread_id = i + 1;
+        thread_ids[i] = i + 1;
         
-        err = add_thread(&t_pool, NULL, thread_worker, thread_id);
+        err = add_thread(&t_pool, NULL, thread_worker, &thread_ids[i]);
         if (err != 0) 
         {
             printf("Main: Failed to add thread %d: %d\n", i, err);
-            free(thread_id);
         } else 
         {
             printf("Main: Added task %d to thread pool\n", i + 1);
@@ -106,7 +107,8 @@ int main()
     }
     
     printf("Main: Waiting for threads to complete...\n");
-    sleep(20);
+    sleep(10);
+    free(thread_ids);
     
     printf("Main: Destroying thread pool\n");
     destroy_thread_pool(&t_pool);

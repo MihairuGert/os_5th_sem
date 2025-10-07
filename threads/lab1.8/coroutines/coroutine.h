@@ -21,6 +21,8 @@ typedef struct {
     context_t       context;
     coro_queue_t    queue;
     bool            is_done;
+
+    ucontext_t      main_ctx;
 } scheduler_t;
 
 typedef struct {
