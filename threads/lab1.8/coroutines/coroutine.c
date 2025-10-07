@@ -5,6 +5,7 @@ free_context_stack(context_t *context)
 {
     if (!context || !context->stack)
         return CONTEXT_DESTROY_ERR;
+    
     free(context->stack);
     return 0;
 }
@@ -78,7 +79,7 @@ scheduler_routine(scheduler_t *scheduler)
         coro = coro_queue_pop(&scheduler->queue);
         if (!coro)
         {
-            free_context_stack(&scheduler->context);
+            free(scheduler->context.stack);
             swapcontext(&scheduler->context.context, &scheduler->main_ctx);
         }
 
