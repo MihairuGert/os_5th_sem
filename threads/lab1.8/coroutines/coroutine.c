@@ -128,6 +128,9 @@ yeild()
     int         err;
     coroutine_t *cur_coro;
 
+    if (coro_map_init_cnt <= 0)
+        return CORO_INIT_ERR;
+
     cur_coro = coro_map_get(&cur_coro_map, gettid());
 
     err = coro_queue_push(&cur_coro->scheduler->queue, cur_coro);
