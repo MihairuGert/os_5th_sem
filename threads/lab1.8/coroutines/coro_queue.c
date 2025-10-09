@@ -1,4 +1,5 @@
 #include "coro_queue.h"
+#include <stdlib.h>
 
 void 
 coro_queue_init(coro_queue_t *queue) 
@@ -8,26 +9,14 @@ coro_queue_init(coro_queue_t *queue)
     queue->size = 0;
 }
 
-bool 
-coro_queue_empty(const coro_queue_t *queue) 
-{
-    return queue->head == NULL;
-}
-
-size_t 
-coro_queue_size(const coro_queue_t *queue) 
-{
-    return queue->size;
-}
-
 int 
-coro_queue_push(coro_queue_t *queue, coroutine_info_t *coro) 
+coro_queue_push(coro_queue_t *queue, coroutine_t *coro) 
 {
     coro_queue_node_t *node;
     
     node = malloc(sizeof(coro_queue_node_t));
     if (!node)
-        return NODE_MALLOC_ERR;
+        return -1;
 
     node->coro = coro;
     node->next = NULL;
@@ -47,11 +36,11 @@ coro_queue_push(coro_queue_t *queue, coroutine_info_t *coro)
     return 0;
 }
 
-coroutine_info_t *
+coroutine_t*
 coro_queue_pop(coro_queue_t *queue) 
 {
-    coro_queue_node_t *node;
-    coroutine_info_t *coro;
+    coro_queue_node_t   *node;
+    coroutine_t         *coro;
 
     if (queue->head == NULL)
         return NULL;
@@ -67,54 +56,6 @@ coro_queue_pop(coro_queue_t *queue)
     free(node);
     queue->size--;
     return coro;
-}
-
-coroutine_info_t *
-coro_queue_peek(const coro_queue_t *queue) 
-{
-    if (queue->head == NULL)
-        return NULL;
-    return queue->head->coro;
-}
-
-bool 
-coro_queue_remove(coro_queue_t *queue, coroutine_info_t *target_coro) 
-{
-    coro_queue_node_t *node;
-    coro_queue_node_t *current;
-    
-    if (queue->head == NULL || target_coro == NULL)
-        return false;
-    
-    if (queue->head->coro == target_coro) 
-    {
-        node = queue->head;
-        queue->head = node->next;
-        if (queue->tail == node)
-            queue->tail = NULL;
-        free(node);
-        queue->size--;
-        return true;
-    }
-    
-    current = queue->head;
-    while (current->next != NULL && current->next->coro != target_coro) 
-    {
-        current = current->next;
-    }
-    
-    if (current->next != NULL && current->next->coro == target_coro) 
-    {
-        node = current->next;
-        current->next = node->next;
-        if (queue->tail == node)
-            queue->tail = current;
-        free(node);
-        queue->size--;
-        return true;
-    }
-    
-    return false;
 }
 
 void 

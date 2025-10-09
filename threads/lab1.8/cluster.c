@@ -12,23 +12,19 @@
 
 typedef struct {
     int task_id;
-    scheduler_t* sched;
-    coroutine_t* coro;
 } coro_args_t;
 
 void count_task(void* arg)
 {
     int err;
-    coro_args_t* args = (coro_args_t*)arg;
-    int task_id = args->task_id;
-    coroutine_t* coro = args->coro;
+    int task_id = *(int*)arg;
     
     printf("Coroutine %d: Starting count\n", task_id);
     
     for (int i = 1; i <= 3; i++) 
     {
         printf("Coroutine %d: Count %d\n", task_id, i);
-        err = yeild(coro);
+        err = yeild();
         if (err != 0)
             exit(err);
         usleep(100000);
@@ -57,8 +53,6 @@ void* thread_worker(void* arg)
     for (size_t i = 0; i < NUM_TASKS; i++) 
     {
         args[i].task_id = thread_id * 100 + i;
-        args[i].sched = &sched;
-        args[i].coro = &coro[i];
         
         err = create_coroutine(&coro[i], &sched, count_task, &args[i]);
         if (err != 0) 
@@ -80,6 +74,10 @@ int main()
     int             err;
     int             *thread_ids;
     
+    err = coro_init();
+    if (err != 0)
+        return err;
+
     printf("Main: Creating thread pool\n");
     err = create_thread_pool(&t_pool);
     if (err != 0) 
@@ -90,9 +88,9 @@ int main()
     
     printf("Main: Adding tasks to thread pool\n");
 
-    thread_ids = malloc(sizeof(int));
+    thread_ids = malloc(sizeof(int) * 3);
     
-    for (int i = 0; i < 1; i++) 
+    for (int i = 0; i < 3; i++) 
     {
         thread_ids[i] = i + 1;
         
@@ -112,6 +110,11 @@ int main()
     
     printf("Main: Destroying thread pool\n");
     destroy_thread_pool(&t_pool);
+
+    err = coro_fini();
+    if (err != 0)
+        return err;
+
     
     printf("Main: All done!\n");
     return 0;

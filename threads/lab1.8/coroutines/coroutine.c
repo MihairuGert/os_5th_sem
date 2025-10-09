@@ -1,5 +1,8 @@
 #include "coroutine.h"
 
+coro_map_t  cur_coro_map;
+int         coro_map_init_cnt;
+
 static int
 free_context_stack(context_t *context)
 {
@@ -70,12 +73,10 @@ create_context(context_t *context, void (*routine)(void*), void *arg)
 static void
 scheduler_routine(scheduler_t *scheduler)
 {
-    coroutine_info_t    *coro;
+    coroutine_t    *coro;
 
     while (!scheduler->is_done)
     {
-        coro_queue_node_t* head = scheduler->queue.head;
-
         coro = coro_queue_pop(&scheduler->queue);
         if (!coro)
         {
@@ -83,7 +84,9 @@ scheduler_routine(scheduler_t *scheduler)
             swapcontext(&scheduler->context.context, &scheduler->main_ctx);
         }
 
-        swapcontext(&scheduler->context.context, &coro->context.context);
+        coro_map_add(&cur_coro_map, gettid(), coro);
+
+        swapcontext(&scheduler->context.context, &coro->info.context.context);
     }
 }
 
@@ -93,9 +96,16 @@ create_coroutine(coroutine_t *coro,
                 void (*routine)(void*), 
                 void *arg)
 {
-    int         err;
+    int err;
+
+    if (coro_map_init_cnt <= 0)
+        return CORO_INIT_ERR;
+
+    if (!coro || !scheduler)
+        return CREATE_CORO_ERR;
 
     coro->scheduler = scheduler;
+
     coro->info.arg = arg;
     coro->info.user_routine = routine;
 
@@ -105,7 +115,7 @@ create_coroutine(coroutine_t *coro,
 
     coro->info.context.context.uc_link = &scheduler->context.context;
 
-    err = coro_queue_push(&scheduler->queue, &coro->info);
+    err = coro_queue_push(&scheduler->queue, coro);
     if (err != 0)
         return err;
 
@@ -113,18 +123,42 @@ create_coroutine(coroutine_t *coro,
 }
 
 int
-yeild(coroutine_t *coro)
+yeild()
 {
-    int err;
+    int         err;
+    coroutine_t *cur_coro;
 
-    printf("Yeilding %p\n", coro);
-    err = coro_queue_push(&coro->scheduler->queue, &coro->info);
+    cur_coro = coro_map_get(&cur_coro_map, gettid());
+
+    err = coro_queue_push(&cur_coro->scheduler->queue, cur_coro);
     if (err != 0)
         return err;
+
+    err = swapcontext(&cur_coro->info.context.context, &cur_coro->scheduler->context.context);
+    if (err != 0)
+        return err;
+    return 0;
+}
+
+int
+coro_init()
+{
+    if (coro_map_init_cnt > 0)
+        return CORO_INIT_ERR;
+    coro_map_init_cnt++;
+
+    coro_map_create(&cur_coro_map, MAP_CAPACITY);
+    return 0;
+}
+
+int
+coro_fini()
+{
+    if (coro_map_init_cnt <= 0)
+        return CORO_FINI_ERR;
+    coro_map_init_cnt--;
     
-    err = swapcontext(&coro->info.context.context, &coro->scheduler->context.context);
-    if (err != 0)
-        return err;
+    coro_map_destroy(&cur_coro_map);
     return 0;
 }
 
@@ -133,19 +167,29 @@ create_scheduler(scheduler_t *scheduler)
 {
     int err;
 
+    if (coro_map_init_cnt <= 0)
+        return CORO_INIT_ERR;
+
+    if (!scheduler)
+        return CREATE_CORO_ERR;
+
     err = create_context(&scheduler->context, (void (*)(void*))scheduler_routine, scheduler);
     if (err != 0)
         return err;
 
     coro_queue_init(&scheduler->queue);
     scheduler->is_done = false;
+
     return 0;
 }
 
 int 
 run_scheduler(scheduler_t *scheduler)
 {
-    int         err;
+    int err;
+
+    if (coro_map_init_cnt <= 0)
+        return CORO_INIT_ERR;
 
     err = swapcontext(&scheduler->main_ctx, &scheduler->context.context);
     if (err != 0)
