@@ -69,9 +69,7 @@ create_thread_pool(thread_pool_t *t_pool)
         return THREADS_MALLOC_ERR;
 
     for (i = 0; i < CAPACITY; i++) 
-    {
         t_pool->threads[i].state = THREAD_FREE;
-    }
     
     t_pool->thread_count = CAPACITY;
 

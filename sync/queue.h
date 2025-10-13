@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 typedef struct _QueueNode {
 	int val;
@@ -19,6 +20,16 @@ typedef struct _Queue {
 	qnode_t *last;
 
 	pthread_t qmonitor_tid;
+	// 2.2a-d 
+	pthread_spinlock_t spinlock;
+	// 2.2e
+	pthread_mutex_t mutex;
+	// 2.2f
+	pthread_cond_t not_empty;
+    pthread_cond_t not_full;
+	// 2.2g
+	sem_t empty;
+    sem_t full;
 
 	int count;
 	int max_count;

@@ -34,6 +34,12 @@ queue_t* queue_init(int max_count) {
 	q->add_attempts = q->get_attempts = 0;
 	q->add_count = q->get_count = 0;
 
+    err = pthread_mutex_init(&q->mutex, NULL);
+    if (err) {
+        printf("queue_init: pthread_mutex_init() failed: %s\n", strerror(err));
+        abort();
+    }
+
 	err = pthread_create(&q->qmonitor_tid, NULL, qmonitor, q);
 	if (err) {
 		printf("queue_init: pthread_create() failed: %s\n", strerror(err));
@@ -64,6 +70,8 @@ void queue_destroy(queue_t *q) {
         }
     }
 
+    pthread_mutex_destroy(&q->mutex);
+
     cur_node = q->first;
     while (cur_node != NULL) {
         next_node = cur_node->next;
@@ -75,12 +83,18 @@ void queue_destroy(queue_t *q) {
 }
 
 int queue_add(queue_t *q, int val) {
+    pthread_mutex_lock(&q->mutex);
+
 	q->add_attempts++;
 
 	assert(q->count <= q->max_count);
 
-	if (q->count == q->max_count)
-		return 0;
+	
+    if (q->count == q->max_count)
+	{
+        pthread_mutex_unlock(&q->mutex);
+        return 0;
+    }	
 
 	qnode_t *new = malloc(sizeof(qnode_t));
 	if (!new) {
@@ -101,16 +115,22 @@ int queue_add(queue_t *q, int val) {
 	q->count++;
 	q->add_count++;
 
+    pthread_mutex_unlock(&q->mutex);
 	return 1;
 }
 
 int queue_get(queue_t *q, int *val) {
+  	pthread_mutex_lock(&q->mutex);
+
 	q->get_attempts++;
 
 	assert(q->count >= 0);
 
 	if (q->count == 0)
-		return 0;
+    {
+        pthread_mutex_unlock(&q->mutex);
+        return 0;
+    }
 
 	qnode_t *tmp = q->first;
 
@@ -121,13 +141,16 @@ int queue_get(queue_t *q, int *val) {
 	q->count--;
 	q->get_count++;
 
+    pthread_mutex_unlock(&q->mutex);
 	return 1;
 }
 
 void queue_print_stats(queue_t *q) {
+    pthread_mutex_lock(&q->mutex);
 	printf("queue stats: current size %d; attempts: (%ld %ld %ld); counts (%ld %ld %ld)\n",
 		q->count,
 		q->add_attempts, q->get_attempts, q->add_attempts - q->get_attempts,
 		q->add_count, q->get_count, q->add_count -q->get_count);
+    pthread_mutex_unlock(&q->mutex);
 }
 

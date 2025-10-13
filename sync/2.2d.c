@@ -69,6 +69,7 @@ void *writer(void *arg) {
 		if (!ok)
 			continue;
 		i++;
+		//usleep(1);
 	}
 
 	return NULL;
