@@ -70,7 +70,10 @@ void queue_destroy(queue_t *q) {
         }
     }
 
-    pthread_mutex_destroy(&q->mutex);
+    err = pthread_mutex_destroy(&q->mutex);
+	if (err != 0) {
+		exit(err);
+	}
 
     cur_node = q->first;
     while (cur_node != NULL) {

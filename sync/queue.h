@@ -31,6 +31,8 @@ typedef struct _Queue {
 	sem_t empty;
     sem_t full;
 
+	sem_t sem;
+
 	int count;
 	int max_count;
 

@@ -99,7 +99,7 @@ void queue_destroy(queue_t *q) {
 }
 
 int queue_add(queue_t *q, int val) {
-    sem_wait(&q->empty);
+    sem_post(&q->sem);
     
     pthread_mutex_lock(&q->mutex);
 
@@ -128,13 +128,11 @@ int queue_add(queue_t *q, int val) {
 
     pthread_mutex_unlock(&q->mutex);
     
-    sem_post(&q->full);
-    
     return 1;
 }
 
 int queue_get(queue_t *q, int *val) {
-    sem_wait(&q->full);
+    sem_wait(&q->sem);
     
     pthread_mutex_lock(&q->mutex);
 
@@ -154,8 +152,6 @@ int queue_get(queue_t *q, int *val) {
     q->get_count++;
 
     pthread_mutex_unlock(&q->mutex);
-    
-    sem_post(&q->empty);
     
     return 1;
 }
