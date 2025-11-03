@@ -4,14 +4,18 @@ TARGET = tests.c
 CFLAGS = -std=c99 -fsanitize=address -fsanitize=leak -g -Wall -Wextra -Werror
 
 SPINLOCK_DIR = ./spinlock
+MUTEX_DIR = ./mutex
 
-.PHONY: all spinlock tests
+.PHONY: all spinlock mutex tests
 
-all: spinlock tests
+all: spinlock mutex tests
 
 spinlock:
 	$(MAKE) -C $(SPINLOCK_DIR) all
 
+mutex:
+	$(MAKE) -C $(MUTEX_DIR) all
+
 tests:
-	$(COMPILER) $(CFLAGS) -o tests $(TARGET) -Llib -lspinlock -Wl,-rpath=./lib
+	$(COMPILER) $(CFLAGS) -o tests $(TARGET) -Llib -lspinlock -lmutex -Wl,-rpath=./lib
 	

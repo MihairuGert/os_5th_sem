@@ -1,3 +1,6 @@
+#ifndef SPINLOCK_H
+#define SPINLOCK_H
+
 #define ERR_UNSUPPORTED_COMPILER    -1
 #define ERR_TRY_UNLOCK_NOT_LOCKED   -2
 #define ERR_CAS_FUNC                -3
@@ -30,3 +33,4 @@ int spinlock_trylock(spinlock_t *splock);
  * Function to release a spinlock.
  */
 int spinlock_unlock(spinlock_t *splock);
+#endif
