@@ -1,5 +1,5 @@
 COMPILER = gcc
-LIB_NAME = coro
+LIB_NAME = spinlock
 CFLAGS = -std=c99 -fsanitize=address -fsanitize=leak -g -Wall -Wextra -Werror
 
 .PHONY: all clean
