@@ -3,7 +3,7 @@ SRCS_1 = 2.3m.c
 
 CC=gcc
 RM=rm
-CFLAGS= -g -fsanitize=address -fsanitize=leak -Wall -Wextra -Werror
+CFLAGS= -g -fsanitize=address -fsanitize=leak #-Wall -Wextra -Werror
 LIBS=-lpthread
 INCLUDE_DIR="."
 

@@ -19,7 +19,7 @@ typedef struct _Node {
 
 typedef struct _Storage {
     Node *first;
-    pthread_rwlock_t list_lock;
+    long size;
 } Storage;
 
 typedef struct _Args {
@@ -71,20 +71,8 @@ int add_node(Storage* storage, const char* value) {
         return -1;
     }
     
-    int lock_result = pthread_rwlock_wrlock(&storage->list_lock);
-    if (lock_result != 0) {
-        fprintf(stderr, "Error: Failed to acquire list lock: %s\n", strerror(lock_result));
-        pthread_rwlock_destroy(&new_node->sync);
-        free(new_node);
-        return -1;
-    }
-    
     if (storage->first == NULL) {
         storage->first = new_node;
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock: %s\n", strerror(unlock_result));
-        }
         return 0;
     }
     
@@ -94,12 +82,6 @@ int add_node(Storage* storage, const char* value) {
     }
     current->next = new_node;
     
-    int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-    if (unlock_result != 0) {
-        fprintf(stderr, "Error: Failed to unlock list lock: %s\n", strerror(unlock_result));
-        return -1;
-    }
-    
     return 0;
 }
 
@@ -107,13 +89,7 @@ void free_list(Storage* storage) {
     if (storage == NULL) {
         return;
     }
-    
-    int lock_result = pthread_rwlock_wrlock(&storage->list_lock);
-    if (lock_result != 0) {
-        fprintf(stderr, "Error: Failed to acquire list lock for freeing: %s\n", strerror(lock_result));
-        return;
-    }
-    
+
     Node* current = storage->first;
     while (current != NULL) {
         Node* next = current->next;
@@ -125,16 +101,6 @@ void free_list(Storage* storage) {
         current = next;
     }
     storage->first = NULL;
-    
-    int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-    if (unlock_result != 0) {
-        fprintf(stderr, "Error: Failed to unlock list lock during freeing: %s\n", strerror(unlock_result));
-    }
-    
-    int destroy_result = pthread_rwlock_destroy(&storage->list_lock);
-    if (destroy_result != 0) {
-        fprintf(stderr, "Warning: Failed to destroy list rwlock: %s\n", strerror(destroy_result));
-    }
 }
 
 void* count_ascending(void* arg) {
@@ -144,22 +110,11 @@ void* count_ascending(void* arg) {
     }
     
     Storage* storage = (Storage*)arg;
+    
     while (!stop) {
         Node* current = NULL;
         unsigned long long local_count = 0;
-        
-        int lock_result = pthread_rwlock_rdlock(&storage->list_lock);
-        if (lock_result != 0) {
-            fprintf(stderr, "Error: Failed to acquire list lock in count_ascending: %s\n", strerror(lock_result));
-            usleep(1000);
-            continue;
-        }
         current = storage->first;
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in count_ascending: %s\n", strerror(unlock_result));
-        }
-        
         while (current != NULL && current->next != NULL && !stop) {
             int lock1_result = pthread_rwlock_rdlock(&current->sync);
             if (lock1_result != 0) {
@@ -218,19 +173,7 @@ void* count_descending(void* arg) {
     while (!stop) {
         Node* current = NULL;
         unsigned long long local_count = 0;
-        
-        int lock_result = pthread_rwlock_rdlock(&storage->list_lock);
-        if (lock_result != 0) {
-            fprintf(stderr, "Error: Failed to acquire list lock in count_descending: %s\n", strerror(lock_result));
-            usleep(1000);
-            continue;
-        }
         current = storage->first;
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in count_descending: %s\n", strerror(unlock_result));
-        }
-        
         while (current != NULL && current->next != NULL && !stop) {
             int lock1_result = pthread_rwlock_rdlock(&current->sync);
             if (lock1_result != 0) {
@@ -289,19 +232,7 @@ void* count_equal(void* arg) {
     while (!stop) {
         Node* current = NULL;
         unsigned long long local_count = 0;
-        
-        int lock_result = pthread_rwlock_rdlock(&storage->list_lock);
-        if (lock_result != 0) {
-            fprintf(stderr, "Error: Failed to acquire list lock in count_equal: %s\n", strerror(lock_result));
-            usleep(1000);
-            continue;
-        }
         current = storage->first;
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in count_equal: %s\n", strerror(unlock_result));
-        }
-
         while (current != NULL && current->next != NULL && !stop) {
             int lock1_result = pthread_rwlock_rdlock(&current->sync);
             if (lock1_result != 0) {
@@ -351,154 +282,45 @@ void* count_equal(void* arg) {
 }
 
 int safe_swap_nodes(Storage* storage, int thread_id) {
-    if (storage == NULL) {
-        fprintf(stderr, "Error: NULL storage in safe_swap_nodes\n");
-        return 0;
-    }
-    
-    if (thread_id < 0 || thread_id >= 3) {
-        fprintf(stderr, "Error: Invalid thread ID in safe_swap_nodes\n");
-        return 0;
-    }
-    
-    int lock_result = pthread_rwlock_wrlock(&storage->list_lock);
-    if (lock_result != 0) {
-        fprintf(stderr, "Error: Failed to acquire list lock in safe_swap_nodes: %s\n", strerror(lock_result));
-        return 0;
-    }
-    
-    if (storage->first == NULL || storage->first->next == NULL) {
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result));
+    while (!stop) {
+        int randElem = rand() % (storage->size - 3) + 1;
+        pthread_rwlock_rdlock(&storage->first->sync);
+        Node *current = storage->first;
+        Node *prev = NULL;
+        Node *prevprev;
+        int ind = 0;
+        while (ind < randElem) {
+            prevprev = prev;
+            prev = current;
+            pthread_rwlock_rdlock(&current->next->sync);
+            current = current->next;
+            if (prevprev != NULL)
+                pthread_rwlock_unlock(&prevprev->sync);
+            ind++;
         }
-        return 0;
-    }
-    
-    int list_length = 0;
-    Node* current = storage->first;
-    while (current != NULL) {
-        list_length++;
-        current = current->next;
-    }
-    
-    if (list_length < 2) {
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result));
-        }
-        return 0;
-    }
-    
-    int swap_pos = rand() % (list_length - 1);
-    
-    Node* prev = NULL;
-    Node* curr = storage->first;
-    
-    for (int i = 0; i < swap_pos && curr != NULL; i++) {
-        prev = curr;
-        curr = curr->next;
-    }
-    
-    if (curr == NULL || curr->next == NULL) {
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result));
-        }
-        return 0;
-    }
-    
-    Node* next = curr->next;
-    
-    if (prev != NULL) {
-        int prev_lock_result = pthread_rwlock_wrlock(&prev->sync);
-        if (prev_lock_result != 0) {
-            fprintf(stderr, "Error: Failed to acquire previous node lock in safe_swap_nodes: %s\n", strerror(prev_lock_result));
-            int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-            if (unlock_result != 0) {
-                fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result));
-            }
-            return 0;
-        }
-    }
-    
-    int curr_lock_result = pthread_rwlock_wrlock(&curr->sync);
-    if (curr_lock_result != 0) {
-        fprintf(stderr, "Error: Failed to acquire current node lock in safe_swap_nodes: %s\n", strerror(curr_lock_result));
-        if (prev != NULL) {
-            int unlock_result = pthread_rwlock_unlock(&prev->sync);
-            if (unlock_result != 0) {
-                fprintf(stderr, "Error: Failed to unlock previous node in safe_swap_nodes: %s\n", strerror(unlock_result));
-            }
-        }
-        int unlock_result = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result));
-        }
-        return 0;
-    }
-    
-    int next_lock_result = pthread_rwlock_wrlock(&next->sync);
-    if (next_lock_result != 0) {
-        fprintf(stderr, "Error: Failed to acquire next node lock in safe_swap_nodes: %s\n", strerror(next_lock_result));
-        if (prev != NULL) {
-            int unlock_result = pthread_rwlock_unlock(&prev->sync);
-            if (unlock_result != 0) {
-                fprintf(stderr, "Error: Failed to unlock previous node in safe_swap_nodes: %s\n", strerror(unlock_result));
-            }
-        }
-        int unlock_result = pthread_rwlock_unlock(&curr->sync);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock current node in safe_swap_nodes: %s\n", strerror(unlock_result));
-        }
-        int unlock_result2 = pthread_rwlock_unlock(&storage->list_lock);
-        if (unlock_result2 != 0) {
-            fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result2));
-        }
-        return 0;
-    }
-    
-    curr->next = next->next;
-    next->next = curr;
-    
-    if (prev == NULL) {
-        storage->first = next;
-    } else {
-        prev->next = next;
-    }
+        // todo add mutex
+        pthread_rwlock_unlock(&prev->sync);
+        pthread_rwlock_wrlock(&prev->sync);
 
-    if (prev != NULL) {
-        int unlock_result = pthread_rwlock_unlock(&prev->sync);
-        if (unlock_result != 0) {
-            fprintf(stderr, "Error: Failed to unlock previous node in safe_swap_nodes: %s\n", strerror(unlock_result));
-        }
+        pthread_rwlock_unlock(&current->sync);
+        pthread_rwlock_wrlock(&current->sync);
+
+        pthread_rwlock_wrlock(&current->next->sync);     
+        
+        prev->next = current->next;
+        current->next = current->next->next;
+        current->next->next = current;
+
+        pthread_rwlock_unlock(&prev->sync);
+        pthread_rwlock_unlock(&prev->next->sync);
+        pthread_rwlock_unlock(&prev->next->next->sync);
+        
+        usleep(100);
     }
-    
-    int unlock_result1 = pthread_rwlock_unlock(&curr->sync);
-    if (unlock_result1 != 0) {
-        fprintf(stderr, "Error: Failed to unlock current node in safe_swap_nodes: %s\n", strerror(unlock_result1));
-    }
-    
-    int unlock_result2 = pthread_rwlock_unlock(&next->sync);
-    if (unlock_result2 != 0) {
-        fprintf(stderr, "Error: Failed to unlock next node in safe_swap_nodes: %s\n", strerror(unlock_result2));
-    }
-    
-    int unlock_result3 = pthread_rwlock_unlock(&storage->list_lock);
-    if (unlock_result3 != 0) {
-        fprintf(stderr, "Error: Failed to unlock list lock in safe_swap_nodes: %s\n", strerror(unlock_result3));
-    }
-    
-    swap_counters[thread_id]++;
     return 1;
 }
 
 void* swap_thread(void* arg) {
-    if (arg == NULL) {
-        fprintf(stderr, "Error: NULL argument passed to swap_thread\n");
-        return NULL;
-    }
-    
     Args *args = (Args*)arg;
     Storage *storage = args->storage;
     int thread_id = args->id;
@@ -540,13 +362,8 @@ int main(int argc, char* argv[]) {
     srand(time(NULL));
     
     Storage storage;
+    storage.size = list_size;
     storage.first = NULL;
-    
-    int init_result = pthread_rwlock_init(&storage.list_lock, NULL);
-    if (init_result != 0) {
-        fprintf(stderr, "Error: Failed to initialize list lock: %s\n", strerror(init_result));
-        return 1;
-    }
     
     printf("Creating list with %ld elements...\n", list_size);
     
