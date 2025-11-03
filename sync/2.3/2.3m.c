@@ -282,42 +282,69 @@ void* count_equal(void* arg) {
 }
 
 int safe_swap_nodes(Storage* storage, int thread_id) {
+    if (storage == NULL || storage->size < 3) {
+        return 0;
+    }
+    
     while (!stop) {
         int randElem = rand() % (storage->size - 3) + 1;
-        pthread_rwlock_rdlock(&storage->first->sync);
-        Node *current = storage->first;
+
         Node *prev = NULL;
-        Node *prevprev;
-        int ind = 0;
-        while (ind < randElem) {
-            prevprev = prev;
-            prev = current;
-            pthread_rwlock_rdlock(&current->next->sync);
-            current = current->next;
-            if (prevprev != NULL)
-                pthread_rwlock_unlock(&prevprev->sync);
+        Node *current = NULL;
+        Node *next = NULL;
+        Node *next_next = NULL;
+
+        pthread_rwlock_rdlock(&storage->first->sync);
+        prev = storage->first;
+        
+        int ind = 1;
+        while (ind < randElem && prev != NULL && prev->next != NULL) {
+            pthread_rwlock_rdlock(&prev->next->sync);
+            Node* temp = prev;
+            prev = prev->next;
+            pthread_rwlock_unlock(&temp->sync);
             ind++;
         }
-        // todo add mutex
+        
+        if (prev == NULL || prev->next == NULL || prev->next->next == NULL) {
+            if (prev != NULL) pthread_rwlock_unlock(&prev->sync);
+            continue;
+        }
+        
+        pthread_rwlock_rdlock(&prev->next->sync);
+        current = prev->next;
+        pthread_rwlock_rdlock(&current->next->sync);
+        next = current->next;
+        
         pthread_rwlock_unlock(&prev->sync);
-        pthread_rwlock_wrlock(&prev->sync);
-
         pthread_rwlock_unlock(&current->sync);
+        pthread_rwlock_unlock(&next->sync);
+        
+        pthread_rwlock_wrlock(&prev->sync);
         pthread_rwlock_wrlock(&current->sync);
-
-        pthread_rwlock_wrlock(&current->next->sync);     
+        pthread_rwlock_wrlock(&next->sync);
         
-        prev->next = current->next;
-        current->next = current->next->next;
-        current->next->next = current;
+        if (prev->next != current || current->next != next) {
+            pthread_rwlock_unlock(&prev->sync);
+            pthread_rwlock_unlock(&current->sync);
+            pthread_rwlock_unlock(&next->sync);
+            continue;
+        }
 
+        next_next = next->next;
+        
+        prev->next = next;
+        current->next = next_next;
+        next->next = current;
+        
         pthread_rwlock_unlock(&prev->sync);
-        pthread_rwlock_unlock(&prev->next->sync);
-        pthread_rwlock_unlock(&prev->next->next->sync);
+        pthread_rwlock_unlock(&current->sync);
+        pthread_rwlock_unlock(&next->sync);
         
-        usleep(100);
+        swap_counters[thread_id]++;
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 void* swap_thread(void* arg) {
