@@ -1,7 +1,7 @@
 COMPILER = gcc
 TARGET = tests.c
 
-CFLAGS = -std=c99 -fsanitize=address -fsanitize=leak -g -Wall -Wextra -Werror
+CFLAGS = -fsanitize=address -fsanitize=leak -g -Wall -Wextra -Werror
 
 SPINLOCK_DIR = ./spinlock
 MUTEX_DIR = ./mutex
