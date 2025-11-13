@@ -25,13 +25,16 @@ SRCS_8 = 2.2f.c 2.2d.c
 TARGET_9 = 2.2g-threads
 SRCS_9 = 2.2g.c 2.2d.c
 
+TARGET_10 = 2.2my
+SRCS_10 = 2.2my_mutex.c 2.2d.c
+
 CC=gcc
 RM=rm
 CFLAGS= -g -Wall -fsanitize=address -static-libasan
 LIBS=-lpthread
 INCLUDE_DIR="."
 
-all: ${TARGET_1} ${TARGET_2} ${TARGET_3} ${TARGET_4} $(TARGET_5) $(TARGET_6) $(TARGET_7) $(TARGET_8) $(TARGET_9)
+all: ${TARGET_1} ${TARGET_2} ${TARGET_3} ${TARGET_4} $(TARGET_5) $(TARGET_6) $(TARGET_7) $(TARGET_8) $(TARGET_9) $(TARGET_10)
 
 ${TARGET_1}: queue.h ${SRCS_1}
 	${CC} ${CFLAGS} -I${INCLUDE_DIR} ${SRCS_1} ${LIBS} -o ${TARGET_1}
@@ -59,6 +62,9 @@ ${TARGET_8}: queue.h ${SRCS_8}
 
 ${TARGET_9}: queue.h ${SRCS_9}
 	${CC} ${CFLAGS} -I${INCLUDE_DIR} ${SRCS_9} ${LIBS} -o ${TARGET_9}
+
+${TARGET_10}: queue.h ${SRCS_10}
+	${CC} ${CFLAGS} -I${INCLUDE_DIR} ${SRCS_10} ${LIBS} -o ${TARGET_10}
 
 clean:
 	${RM} -f *.o ${TARGET_1} ${TARGET_2}

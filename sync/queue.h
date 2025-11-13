@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include "2.4/mutex/mutex.h"
 
 typedef struct _QueueNode {
 	int val;
@@ -32,6 +33,8 @@ typedef struct _Queue {
     sem_t full;
 
 	sem_t sem;
+
+	mutex_t mymutex;
 
 	int count;
 	int max_count;
