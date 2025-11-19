@@ -3,7 +3,7 @@
 int main() 
 {
     int             err;
-    master_thread_t master;
+    master_t master;
 
     err = init_master_thread(&master);
     if (err != 0)

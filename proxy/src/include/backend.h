@@ -4,18 +4,24 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "client.h"
+#include "http.h"
 
 #include "../../lib/libuv/include/uv.h"
 
-typedef struct
+typedef struct backend_thread
 {
     /*
      * Backend gets clients fd from master thread
      * through this pipe asynchronously.
      */
     uv_pipe_t   fd_pipe;
+    /*
+     * Master sends clients fd to backend thread
+     * through this pipe.
+     */
     uv_pipe_t   master_pipe;
     int         pipe_fd[2];
 

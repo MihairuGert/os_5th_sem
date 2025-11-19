@@ -4,7 +4,7 @@ static void alloc_pipe_buf(uv_handle_t* handle, size_t suggested_size, uv_buf_t*
 static void read_pipe(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 
 static void new_client(backend_t* backend, uv_tcp_t* client);
-static void alloc_backend_buf(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
+static void alloc_client_buf(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 static void read_client(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 
 int create_backend(backend_t* backend)
@@ -118,11 +118,11 @@ static void
 new_client(backend_t* backend, uv_tcp_t* client)
 {
     backend->client_count++;
-    uv_read_start((uv_stream_t*) client, alloc_backend_buf, read_client);
+    uv_read_start((uv_stream_t*) client, alloc_client_buf, read_client);
 }
 
 static void
-alloc_backend_buf(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
+alloc_client_buf(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 {
 	buf->base = malloc(suggested_size);
 	buf->len = suggested_size;
@@ -135,7 +135,6 @@ typedef struct {
 
 void free_write_req(uv_write_t *req) {
     write_req_t *wr = (write_req_t*) req;
-    free(wr->buf.base);
     free(wr);
 }
 
@@ -172,11 +171,25 @@ void echo_write(uv_write_t *req, int status) {
 static void
 read_client(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf)
 {
+	int err;
+
 	if (nread > 0) {
         write_req_t *req = (write_req_t*) malloc(sizeof(write_req_t));
-        req->buf = uv_buf_init(buf->base, nread);
+        
+		http_req_t http_req;
+		err = parse_http_req(&http_req, buf->base, nread);
+		if (err != 0)
+		{
+			fprintf(stderr, "Http req parse error. Skipping client req...\n");
+			return;
+		}
+		char str[512];
+		sprintf(str, "%.*s %.*s", (int) http_req.method_len, http_req.method,(int) http_req.path_len, http_req.path);
+
+		req->buf = uv_buf_init(str, strlen(str));
         uv_write((uv_write_t*) req, client, &req->buf, 1, echo_write);
-        return;
+        
+		return;
     }
     if (nread < 0) {
         if (nread != UV_EOF)

@@ -2,15 +2,15 @@
 #include "../include/backend.h"
 #include "../include/config.h"
 
-static int add_backend(master_thread_t *master);
-static backend_t *get_backend(master_thread_t *master);
+static int add_backend(master_t *master);
+static backend_t *get_backend(master_t *master);
 
 static void on_new_connection(uv_stream_t *server, int status);
 static int send_client_to_backend(backend_t* backend, uv_tcp_t* client);
 static void on_client_sent_cb(uv_write_t* req, int status);
 
 int 
-init_master_thread(master_thread_t *master) 
+init_master_thread(master_t *master) 
 {
     int err;
     
@@ -51,7 +51,7 @@ init_master_thread(master_thread_t *master)
 }
 
 int 
-start_master_thread(master_thread_t *master)
+start_master_thread(master_t *master)
 {
     int err;
 
@@ -68,7 +68,7 @@ start_master_thread(master_thread_t *master)
 }
 
 int 
-fini_master_thread(master_thread_t *master) 
+fini_master_thread(master_t *master) 
 {
     int err;
     err = destroy_thread_pool(&master->child_threads);
@@ -85,7 +85,7 @@ fini_master_thread(master_thread_t *master)
 static void 
 on_new_connection(uv_stream_t *server, int status) {
     int err;
-    master_thread_t *master = server->data;
+    master_t *master = server->data;
 
     printf("New connection!\n");
     master->total_clients_ever++;
@@ -159,7 +159,7 @@ on_client_sent_cb(uv_write_t* req, int status) {
 }
 
 static backend_t*
-get_backend(master_thread_t *master)
+get_backend(master_t *master)
 {
     int err;
     printf("[Master] Current backends count = %ld\n", master->cur_backend_count);
@@ -195,7 +195,7 @@ get_backend(master_thread_t *master)
 }
 
 static int 
-add_backend(master_thread_t *master)
+add_backend(master_t *master)
 {
     int err;
 

@@ -34,12 +34,12 @@ typedef struct master_thread {
     sockaddr_in *addr;
 
     bool    was_init;
-    size_t  total_clients_ever;
-} master_thread_t;
+    size_t  total_clients_ever; /* Statistics purpose */
+} master_t;
 
-int init_master_thread(master_thread_t *master);
+int init_master_thread(master_t *master);
 
-int start_master_thread(master_thread_t *master);
+int start_master_thread(master_t *master);
 
-int fini_master_thread(master_thread_t *master);
+int fini_master_thread(master_t *master);
 #endif

@@ -5,8 +5,10 @@ TARGET = ./out/proxy
 
 CFLAGS = -fsanitize=address -fsanitize=leak -g #-Wall -Wextra -Werror
 
-LIB_FLAGS = -luv -lthread_pool
+LIB_FLAGS = -luv -lthread_pool -lpicohttpparser
 LIB_PATHS = -Llib
+
+LIBRARIES = picohttpparser
 
 .PHONY: all main clean client $(LIBRARIES)
 
