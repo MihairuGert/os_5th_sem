@@ -161,13 +161,37 @@ on_client_sent_cb(uv_write_t* req, int status) {
 static backend_t*
 get_backend(master_thread_t *master)
 {
-    // todo add backend limit and more sophisticated round-robin algo.
-    if (master->total_clients_ever > MAX_BACKEND_CONNECTIONS_NUM * master->cur_backend_count) {
-        printf("[Master] Adding new backend\n");
-        add_backend(master);
+    int err;
+    printf("[Master] Current backends count = %ld\n", master->cur_backend_count);
+
+    for (size_t i = 0; i < master->cur_backend_count; i++) 
+    {
+        err = pthread_mutex_lock(&master->backends[i].client_count_lock);
+        if (err != 0)
+            goto mutex_err;
+
+        bool can_accept = master->backends[i].client_count < MAX_BACKEND_CONNECTIONS_NUM;
+        printf("[Master] Current backend (%ld) clients count = %ld\n", i, master->backends[i].client_count);
+        
+        err = pthread_mutex_unlock(&master->backends[i].client_count_lock);
+        if (err != 0)
+            goto mutex_err;
+        
+        if(!can_accept)
+            continue;
+
+        printf("[Master] Found backend (%ld) that can take\n", i);
+        return &master->backends[i];
     }
+    
+    printf("[Master] Adding new backend\n");
+    add_backend(master);
 
     return &master->backends[master->cur_backend_count - 1];
+
+    mutex_err:
+    perror("mutex");
+    return NULL;
 }
 
 static int 
@@ -183,13 +207,13 @@ add_backend(master_thread_t *master)
 
     err = uv_pipe_init(master->serv_loop, &backend_addr->master_pipe, 1);
     if (err != 0) {
-        fini_backend(backend_addr);
+        destroy_backend(backend_addr);
         return err;
     }
 
     err = uv_pipe_open(&backend_addr->master_pipe, backend_addr->pipe_fd[1]);
     if (err != 0) {
-        fini_backend(backend_addr);
+        destroy_backend(backend_addr);
         return err;
     }
 
@@ -197,7 +221,7 @@ add_backend(master_thread_t *master)
     
     err = add_thread(&master->child_threads, NULL, run_backend, backend_addr);
     if (err != 0) {
-        fini_backend(backend_addr);
+        destroy_backend(backend_addr);
         return err;
     }
 

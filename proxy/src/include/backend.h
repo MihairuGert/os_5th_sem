@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "client.h"
 
@@ -18,7 +19,8 @@ typedef struct
     uv_pipe_t   master_pipe;
     int         pipe_fd[2];
 
-    size_t client_count;
+    size_t          client_count;
+    pthread_mutex_t client_count_lock;
 
     uv_loop_t loop;
 } backend_t;
@@ -27,6 +29,6 @@ int create_backend(backend_t *backend);
 
 void *run_backend(void *backend);
 
-int fini_backend(backend_t *backend);
+int destroy_backend(backend_t *backend);
 
 #endif

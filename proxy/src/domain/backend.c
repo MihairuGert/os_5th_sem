@@ -30,6 +30,10 @@ int create_backend(backend_t* backend)
     backend->fd_pipe.data = backend;
     backend->client_count = 0;
 
+	err = pthread_mutex_init(&backend->client_count_lock, NULL);
+	if (err != 0)
+		return err;
+
     return 0;
 }
 
@@ -63,7 +67,7 @@ void *run_backend(void *backend)
     return NULL;
 }
 
-int fini_backend(backend_t* backend)
+int destroy_backend(backend_t* backend)
 {
 	return 0;
 }
@@ -136,8 +140,24 @@ void free_write_req(uv_write_t *req) {
 }
 
 void on_close(uv_handle_t* handle) {
-    backend_t* backend = (backend_t*)handle->data;
+    int err;
+	backend_t* backend = (backend_t*)handle->data;
+
+	err = pthread_mutex_lock(&backend->client_count_lock);
+	if (err != 0)
+	{
+		perror("mutex");
+		exit(1);
+	}
+
     backend->client_count--;
+
+	err = pthread_mutex_unlock(&backend->client_count_lock);
+	if (err != 0)
+	{
+		perror("mutex");
+		exit(1);
+	}
 
     free(handle);
 }
