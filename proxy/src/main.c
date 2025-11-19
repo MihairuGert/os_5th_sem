@@ -22,6 +22,6 @@ int main()
 
 
     err_handle:
-    fprintf(stderr, "%s. Terminate.\n", what(err));
+    fprintf(stderr, "%s. Terminate.\n", uv_err_name(err));
     return err;
 }
