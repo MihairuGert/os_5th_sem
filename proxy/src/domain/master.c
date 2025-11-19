@@ -158,6 +158,18 @@ on_client_sent_cb(uv_write_t* req, int status) {
     free(req);
 }
 
+static backend_t*
+get_backend(master_thread_t *master)
+{
+    // todo add backend limit and more sophisticated round-robin algo.
+    if (master->total_clients_ever > MAX_BACKEND_CONNECTIONS_NUM * master->cur_backend_count) {
+        printf("[Master] Adding new backend\n");
+        add_backend(master);
+    }
+
+    return &master->backends[master->cur_backend_count - 1];
+}
+
 static int 
 add_backend(master_thread_t *master)
 {
@@ -191,18 +203,4 @@ add_backend(master_thread_t *master)
 
     master->cur_backend_count++;
     return 0;
-}
-
-static backend_t*
-get_backend(master_thread_t *master)
-{
-    size_t backend_count = master->cur_backend_count;
-    // todo add backend limit and more sophisticated round-robin algo.
-    if (master->total_clients_ever > MAX_BACKEND_CONNECTIONS_NUM * backend_count) {
-        printf("[Master] Adding new backend\n");
-        add_backend(master);
-        usleep(1000);
-    }
-
-    return &master->backends[backend_count];
 }
