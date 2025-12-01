@@ -7,15 +7,15 @@ int main()
 
     err = init_master_thread(&master);
     if (err != 0)
-	goto err_handle;
+        goto err_handle;
 
     err = start_master_thread(&master);
     if (err != 0)
-	goto err_handle;
+        goto err_handle;
 
     err = fini_master_thread(&master);
     if (err != 0)
-	goto err_handle;
+        goto err_handle;
 
     return 0;
 

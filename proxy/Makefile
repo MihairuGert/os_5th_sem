@@ -10,7 +10,7 @@ LIB_PATHS = -Llib
 
 LIBRARIES = picohttpparser
 
-.PHONY: all main clean client $(LIBRARIES) run
+.PHONY: all main clean client $(LIBRARIES) run fmt
 
 all: $(LIBRARIES) main
 
@@ -30,4 +30,6 @@ clean:
 run:
 	set UV_THREADPOOL_SIZE = 10
 	sudo ./out/proxy
-	
+
+fmt:
+	find . -name "*.c" -o -name "*.h" | xargs clang-format -i -style=WebKit

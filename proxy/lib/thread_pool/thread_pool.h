@@ -24,24 +24,21 @@
  * not quite easy to deal with detached ones.
  */
 
-typedef enum
-{
+typedef enum {
     THREAD_FREE = 0,
     THREAD_JOINED_BY_DEAMON,
     THREAD_JOINED_BY_USER,
     THREAD_DETACHED
 } thread_state_t;
 
-typedef struct
-{
+typedef struct {
     pthread_t thread;
     thread_state_t state;
 
     void* retval;
 } thread_info_t;
 
-typedef struct
-{
+typedef struct {
     thread_info_t* threads;
     size_t thread_count;
 
@@ -51,8 +48,7 @@ typedef struct
 
 int create_thread_pool(thread_pool_t* t_pool);
 
-int add_thread(
-    thread_pool_t* t_pool,
+int add_thread(thread_pool_t* t_pool,
     const pthread_attr_t* attr,
     __typeof__(void*(void*))* start_routine,
     void* arg);

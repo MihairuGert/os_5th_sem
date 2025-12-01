@@ -17,13 +17,11 @@
 
 typedef struct sockaddr_in sockaddr_in;
 
-typedef struct
-{
+typedef struct {
     cache_t* cache;
 } garbage_collector_t;
 
-typedef struct master_thread
-{
+typedef struct master_thread {
     /*
      * Backend threads are here.
      */

@@ -14,8 +14,7 @@
 #include "config.h"
 #include "http.h"
 
-typedef struct
-{
+typedef struct {
     char* data;
     size_t data_size;
     size_t last_offset;
@@ -23,8 +22,7 @@ typedef struct
     bool is_loading;
 } read_progress_t;
 
-typedef struct backend_thread
-{
+typedef struct backend_thread {
     /*
      * Backend gets clients fd from master thread through this pipe
      * asynchronously.
@@ -50,8 +48,7 @@ void* run_backend(void* backend);
 
 int destroy_backend(backend_t* backend);
 
-typedef struct
-{
+typedef struct {
     uv_work_t work_req;
     char* raw_req;
     size_t raw_req_size;
@@ -67,8 +64,7 @@ typedef struct
     atomic_int destroy_count;
 } task_t;
 
-typedef struct
-{
+typedef struct {
     uv_write_t req;
     uv_buf_t buf;
     uv_stream_t* client;

@@ -9,8 +9,7 @@
 
 #define MAX_HEADER_NUM 100
 
-typedef struct
-{
+typedef struct {
     const char* method;
     size_t method_len;
 
@@ -23,8 +22,7 @@ typedef struct
     size_t num_headers;
 } http_req_t;
 
-typedef struct
-{
+typedef struct {
     int minor_version;
 
     int status;
