@@ -1,6 +1,6 @@
 COMPILER = gcc
 LIB_NAME = thread_pool
-CFLAGS = -fsanitize=address -fsanitize=leak -g -Wall -Wextra -Werror
+CFLAGS = #-fsanitize=address -fsanitize=leak -g -Wall -Wextra -Werror
 
 .PHONY: all clean
 

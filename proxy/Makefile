@@ -3,14 +3,14 @@ COMPILER = gcc
 SRCS = $(shell find ./src -name '*.c')
 TARGET = ./out/proxy
 
-CFLAGS = -fsanitize=address -fsanitize=leak -g #-Wall -Wextra -Werror
+CFLAGS = -O0 -DDEBUG -fsanitize=address -fsanitize=leak -g -fno-omit-frame-pointer #-Wall -Wextra -Werror
 
-LIB_FLAGS = -luv -lthread_pool -lpicohttpparser
+LIB_FLAGS = -l:libuv.a -lthread_pool -lpicohttpparser -lcurl
 LIB_PATHS = -Llib
 
 LIBRARIES = picohttpparser
 
-.PHONY: all main clean client $(LIBRARIES)
+.PHONY: all main clean client $(LIBRARIES) run
 
 all: $(LIBRARIES) main
 
@@ -26,3 +26,8 @@ client:
 clean:
 	$(foreach lib, $(LIBRARIES), $(MAKE) -C ./lib/$(lib) clean;)
 	rm -f $(TARGET)
+
+run:
+	set UV_THREADPOOL_SIZE = 10
+	sudo ./out/proxy
+	
