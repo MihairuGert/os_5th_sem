@@ -114,6 +114,7 @@ fini_master_thread(master_t * master)
 	}
 
 	master->was_init = false;
+    curl_global_cleanup();
 
 	return 0;
 }

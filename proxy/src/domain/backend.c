@@ -33,7 +33,6 @@ int create_backend(backend_t* backend)
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, backend->pipe_fd) != 0)
     {
 	perror("socketpair");
-	curl_global_cleanup();
 	return -1;
     }
 
@@ -42,7 +41,6 @@ int create_backend(backend_t* backend)
     {
 	close(backend->pipe_fd[0]);
 	close(backend->pipe_fd[1]);
-	curl_global_cleanup();
 	return err;
     }
 
@@ -248,7 +246,6 @@ static write_req_t* alloc_write_req_t(
 
 int destroy_backend(backend_t* backend)
 {
-    curl_global_cleanup();
     return 0;
 }
 

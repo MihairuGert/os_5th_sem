@@ -45,8 +45,6 @@ create_entry(const char *key, size_t initial_size, time_t ttl)
 	entry->expiry_time = now + ttl;
 
 	entry->next = NULL;
-	entry->lru_prev = NULL;
-	entry->lru_next = NULL;
 
 	entry->waiting_clients = NULL;
 	if (pthread_mutex_init(&entry->waiters_mutex, NULL) != 0)
@@ -78,128 +76,6 @@ free_entry(cache_entry_t * entry)
 
 		free(entry);
 	}
-}
-
-static void
-lru_add(cache_t * cache, cache_entry_t * entry)
-{
-	pthread_mutex_lock(&cache->lru_mutex);
-
-	entry->lru_next = cache->lru_head;
-	entry->lru_prev = NULL;
-
-	if (cache->lru_head)
-	{
-		cache->lru_head->lru_prev = entry;
-	}
-	cache->lru_head = entry;
-
-	if (!cache->lru_tail)
-	{
-		cache->lru_tail = entry;
-	}
-
-	pthread_mutex_unlock(&cache->lru_mutex);
-}
-
-static void
-lru_touch(cache_t * cache, cache_entry_t * entry)
-{
-	pthread_mutex_lock(&cache->lru_mutex);
-
-	if (entry == cache->lru_head)
-	{
-		pthread_mutex_unlock(&cache->lru_mutex);
-		return;
-	}
-
-	if (entry->lru_prev)
-	{
-		entry->lru_prev->lru_next = entry->lru_next;
-	}
-	if (entry->lru_next)
-	{
-		entry->lru_next->lru_prev = entry->lru_prev;
-	}
-
-	if (entry == cache->lru_tail)
-	{
-		cache->lru_tail = entry->lru_prev;
-	}
-
-	entry->lru_next = cache->lru_head;
-	entry->lru_prev = NULL;
-
-	if (cache->lru_head)
-	{
-		cache->lru_head->lru_prev = entry;
-	}
-	cache->lru_head = entry;
-
-	if (!cache->lru_tail)
-	{
-		cache->lru_tail = entry;
-	}
-
-	pthread_mutex_unlock(&cache->lru_mutex);
-}
-
-static void
-lru_remove(cache_t * cache, cache_entry_t * entry)
-{
-	pthread_mutex_lock(&cache->lru_mutex);
-
-	if (entry->lru_prev)
-	{
-		entry->lru_prev->lru_next = entry->lru_next;
-	}
-	else
-	{
-		cache->lru_head = entry->lru_next;
-	}
-
-	if (entry->lru_next)
-	{
-		entry->lru_next->lru_prev = entry->lru_prev;
-	}
-	else
-	{
-		cache->lru_tail = entry->lru_prev;
-	}
-
-	entry->lru_prev = NULL;
-	entry->lru_next = NULL;
-
-	pthread_mutex_unlock(&cache->lru_mutex);
-}
-
-static cache_entry_t * lru_remove_oldest(cache_t * cache)
-{
-	pthread_mutex_lock(&cache->lru_mutex);
-
-	cache_entry_t *oldest = cache->lru_tail;
-
-	if (!oldest)
-	{
-		pthread_mutex_unlock(&cache->lru_mutex);
-		return NULL;
-	}
-
-	if (oldest->lru_prev)
-	{
-		oldest->lru_prev->lru_next = NULL;
-	}
-	else
-	{
-		cache->lru_head = NULL;
-	}
-	cache->lru_tail = oldest->lru_prev;
-
-	oldest->lru_prev = NULL;
-	oldest->lru_next = NULL;
-
-	pthread_mutex_unlock(&cache->lru_mutex);
-	return oldest;
 }
 
 int
@@ -260,16 +136,6 @@ cache_init(
 void
 cache_cleanup(cache_t * cache)
 {
-	cache_entry_t *current = cache->lru_head;
-
-	while (current)
-	{
-		cache_entry_t *next = current->lru_next;
-
-		free_entry(current);
-		current = next;
-	}
-
 	for (size_t i = 0; i < cache->num_buckets; i++)
 	{
 		pthread_mutex_destroy(&cache->buckets[i].mutex);
@@ -375,7 +241,6 @@ cache_lookup_partial(
 			pthread_rwlock_unlock(&entry->data_lock);
 
 			entry->last_accessed = time(NULL);
-			lru_touch(cache, entry);
 
 			cache->hits++;
 			pthread_mutex_unlock(&bucket->mutex);
@@ -418,7 +283,6 @@ cache_start_loading(cache_t * cache, const char *key, time_t ttl)
 
 	entry->next = bucket->head;
 	bucket->head = entry;
-	lru_add(cache, entry);
 
 	cache->current_entries++;
 
@@ -545,7 +409,6 @@ cache_cancel_loading(cache_t * cache, const char *key)
 				bucket->head = entry->next;
 			}
 
-			lru_remove(cache, entry);
 			cache->current_entries--;
 			free_entry(entry);
 
@@ -591,7 +454,6 @@ cache_clean_expired(cache_t * cache)
 					bucket->head = next;
 				}
 
-				lru_remove(cache, entry);
 				cache->current_size -= entry->allocated_size;
 				cache->current_entries--;
 				free_entry(entry);

@@ -55,8 +55,6 @@ typedef struct cache_entry
     time_t expiry_time;
 
     struct cache_entry* next;
-    struct cache_entry* lru_prev;
-    struct cache_entry* lru_next;
 
     cache_waiter_t* waiting_clients;
     pthread_mutex_t waiters_mutex;
