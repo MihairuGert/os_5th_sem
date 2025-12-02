@@ -46,8 +46,6 @@ typedef struct cache_entry {
     pthread_rwlock_t data_lock;
 
     time_t last_accessed;
-    time_t created_at;
-    time_t expiry_time;
 
     struct cache_entry* next;
 
@@ -65,10 +63,6 @@ typedef struct {
 typedef struct {
     cache_bucket_t* buckets;
     size_t num_buckets;
-
-    cache_entry_t* lru_head;
-    cache_entry_t* lru_tail;
-    pthread_mutex_t lru_mutex;
 
     size_t max_size;
     size_t current_size;

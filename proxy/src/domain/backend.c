@@ -238,7 +238,7 @@ static void send_next_chunk(write_req_t* wr)
     bool still_loading = false;
 
     cache_status_t status = cache_lookup_partial(wr->backend->cache, wr->path, &data, &data_size,
-        wr->progress.last_offset, 4096, &still_loading);
+        wr->progress.last_offset, PACKET_SIZE, &still_loading);
 
     printf(
         "[Backend %d] cache_lookup_partial-> status=%d, data_size=%zu "
@@ -315,7 +315,7 @@ static void send_next_chunk(write_req_t* wr)
             char* check_data = NULL;
             size_t check_size = 0;
             cache_status_t check_status = cache_lookup_partial(wr->backend->cache, wr->path, &data, 
-				&check_size, wr->progress.last_offset, 4096, &is_still_loading_check);
+				&check_size, wr->progress.last_offset, PACKET_SIZE, &is_still_loading_check);
             if (check_size > 0 || !is_still_loading_check) {
                 if (check_data)
                     free(check_data);

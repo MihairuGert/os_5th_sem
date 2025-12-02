@@ -16,6 +16,7 @@
  */
 #define MAX_BACKEND_NUM 10
 #define MAX_BACKEND_CONNECTIONS_NUM 10
+#define PACKET_SIZE 16384
 
 /*
  * Cache settings.
@@ -23,6 +24,6 @@
 #define MAX_CACHE_SIZE 10 * 1024 * 1024
 #define MAX_CACHE_ENTRIES 128
 #define BUCKET_COUNT 64
-#define DEFAULT_TTL 30
+#define DEFAULT_TTL 100
 
 #endif

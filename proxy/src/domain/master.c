@@ -247,6 +247,7 @@ static void* cache_cleaner_thread(void* arg)
         sleep(30);
 		printf("[GC %d] Start cleaning\n", gettid());
         cache_clean_expired(gc->cache);
+        printf("[GC %d] Finished cleaning\n", gettid());
     }
     return NULL;
 }

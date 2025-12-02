@@ -39,8 +39,6 @@ static cache_entry_t* create_entry(const char* key,
     time_t now = time(NULL);
 
     entry->last_accessed = now;
-    entry->created_at = now;
-    entry->expiry_time = now + ttl;
 
     entry->next = NULL;
 
@@ -88,8 +86,6 @@ int cache_init(cache_t* cache,
         return -1;
 
     cache->num_buckets = num_buckets;
-    cache->lru_head = NULL;
-    cache->lru_tail = NULL;
     cache->max_size = max_size;
     cache->current_size = 0;
     cache->max_entries = max_entries;
@@ -109,14 +105,6 @@ int cache_init(cache_t* cache,
         cache->buckets[i].head = NULL;
     }
 
-    if (pthread_mutex_init(&cache->lru_mutex, NULL) != 0) {
-        for (size_t i = 0; i < num_buckets; i++) {
-            pthread_mutex_destroy(&cache->buckets[i].mutex);
-        }
-        free(cache->buckets);
-        return -1;
-    }
-
     return 0;
 }
 
@@ -126,12 +114,9 @@ void cache_cleanup(cache_t* cache)
         pthread_mutex_destroy(&cache->buckets[i].mutex);
     }
     free(cache->buckets);
-    pthread_mutex_destroy(&cache->lru_mutex);
 
     cache->buckets = NULL;
     cache->num_buckets = 0;
-    cache->lru_head = NULL;
-    cache->lru_tail = NULL;
     cache->current_size = 0;
     cache->current_entries = 0;
 }
@@ -291,6 +276,7 @@ int cache_append_data(cache_entry_t* entry,
     pthread_rwlock_wrlock(&entry->data_lock);
 
     size_t current_size = atomic_load(&entry->data_size);
+    entry->last_accessed = time(NULL);
 
     if (current_size + chunk_size > entry->allocated_size) {
         size_t new_size = entry->allocated_size;
@@ -327,7 +313,7 @@ int cache_finish_loading(cache_entry_t* entry)
     }
 
     pthread_rwlock_wrlock(&entry->data_lock);
-    entry->expiry_time = time(NULL) + 10;
+    entry->last_accessed = time(NULL);
 
     atomic_store(&entry->is_loading, false);
 
@@ -388,7 +374,9 @@ void cache_clean_expired(cache_t* cache)
     for (size_t i = 0; i < cache->num_buckets; i++) {
         cache_bucket_t* bucket = &cache->buckets[i];
 
+        printf("[GC %d] Mutex %p try lock\n", gettid(), &bucket->mutex);
         pthread_mutex_lock(&bucket->mutex);
+        printf("[GC %d] Mutex %p locked\n", gettid(), &bucket->mutex);
 
         cache_entry_t* entry = bucket->head;
         cache_entry_t* prev = NULL;
@@ -397,8 +385,12 @@ void cache_clean_expired(cache_t* cache)
         while (entry) {
             next = entry->next;
             if (entry->is_loading)
+            {
+                entry = next;
                 continue;
-            if (entry->expiry_time < now) {
+            }
+                
+            if (entry->last_accessed + cache->default_ttl < now) {
                 if (prev) {
                     prev->next = next;
                 } else {
@@ -415,6 +407,7 @@ void cache_clean_expired(cache_t* cache)
         }
 
         pthread_mutex_unlock(&bucket->mutex);
+        printf("[GC %d] Mutex %p unlock\n", gettid(), &bucket->mutex);
     }
 }
 
